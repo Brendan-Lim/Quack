@@ -1,0 +1,242 @@
+{
+ "id": "arithmetic_foundations",
+ "version": 1,
+ "title": "Arithmetic Foundations",
+ "tagline": "Adding, taking away, times tables and the order of operations.",
+ "skills": [
+  {
+   "id": "arithmetic.add_subtract",
+   "title": "Adding and subtracting",
+   "objective": "Add and take away two-digit numbers, and go below zero.",
+   "prerequisites": [],
+   "misconceptions": [
+    "sign_error"
+   ]
+  },
+  {
+   "id": "arithmetic.multiply_divide",
+   "title": "Multiplying and dividing",
+   "objective": "Use times tables to multiply and divide.",
+   "prerequisites": [
+    "arithmetic.add_subtract"
+   ],
+   "misconceptions": []
+  },
+  {
+   "id": "arithmetic.order_of_operations",
+   "title": "Order of operations",
+   "objective": "Work out a calculation with more than one operation in the right order.",
+   "prerequisites": [
+    "arithmetic.multiply_divide"
+   ],
+   "misconceptions": []
+  }
+ ],
+ "levels": [
+  {
+   "id": "arithmetic_add_subtract",
+   "number": 1,
+   "kind": "level",
+   "title": "Add and Subtract",
+   "skills": [
+    "arithmetic.add_subtract"
+   ],
+   "prerequisites": [],
+   "objective": "Add and take away two-digit numbers, one column at a time.",
+   "lesson": {
+    "intro": "Line the numbers up by place value: ones under ones, tens under tens.",
+    "steps": [
+     "Add the ones first. If they make ten or more, carry a ten.",
+     "Then add the tens, with any ten you carried.",
+     "To take away, start with the ones. If the top digit is smaller, borrow a ten."
+    ],
+    "example": {
+     "question": "Work out 47 + 38",
+     "working": [
+      "7 + 8 = 15: write 5, carry 1",
+      "4 + 3 + 1 = 8",
+      "= 85"
+     ],
+     "note": "The 1 carried is a ten."
+    },
+    "remember": "Ones first, then tens.",
+    "shown": [
+     "47 + 38",
+     "63 - 27"
+    ]
+   },
+   "opener": {
+    "template": "arithmetic.add",
+    "params": {
+     "a": 34,
+     "b": 21
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "arithmetic_multiply_divide",
+   "number": 2,
+   "kind": "level",
+   "title": "Multiply and Divide",
+   "skills": [
+    "arithmetic.multiply_divide"
+   ],
+   "prerequisites": [
+    "arithmetic_add_subtract"
+   ],
+   "objective": "Use times tables to multiply, and divide by thinking of them backwards.",
+   "lesson": {
+    "intro": "Multiplying is adding equal groups. Dividing shares into equal groups.",
+    "steps": [
+     "7 × 8 means seven groups of eight.",
+     "To divide 48 ÷ 6, ask: what times 6 makes 48?",
+     "A times table fact works both ways."
+    ],
+    "example": {
+     "question": "Work out 42 ÷ 7",
+     "working": [
+      "What × 7 = 42?",
+      "6 × 7 = 42",
+      "= 6"
+     ],
+     "note": "Division is multiplication backwards."
+    },
+    "remember": "Know one fact, and you know its division too.",
+    "shown": [
+     "42 / 7",
+     "7 * 8",
+     "48 / 6"
+    ]
+   },
+   "opener": {
+    "template": "arithmetic.multiply",
+    "params": {
+     "a": 4,
+     "b": 9
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "arithmetic_order_of_operations",
+   "number": 3,
+   "kind": "level",
+   "title": "Order of Operations",
+   "skills": [
+    "arithmetic.order_of_operations"
+   ],
+   "prerequisites": [
+    "arithmetic_multiply_divide"
+   ],
+   "objective": "Work out brackets first, then × and ÷, then + and −.",
+   "lesson": {
+    "intro": "Not every calculation goes left to right.",
+    "steps": [
+     "Brackets first.",
+     "Then multiply and divide, left to right.",
+     "Then add and subtract, left to right."
+    ],
+    "example": {
+     "question": "Work out 2 + 3 × 4",
+     "working": [
+      "3 × 4 = 12 first",
+      "2 + 12",
+      "= 14"
+     ],
+     "note": "Not 5 × 4: the × comes before the +."
+    },
+    "remember": "Brackets, then × and ÷, then + and −.",
+    "shown": [
+     "2 + 3 * 4",
+     "(2 + 3) * 4"
+    ]
+   },
+   "opener": {
+    "template": "arithmetic.multiply_first",
+    "params": {
+     "a": 5,
+     "b": 2,
+     "c": 6
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "arithmetic_challenge",
+   "number": 4,
+   "kind": "challenge",
+   "title": "Number Challenge",
+   "skills": [
+    "arithmetic.add_subtract",
+    "arithmetic.multiply_divide",
+    "arithmetic.order_of_operations"
+   ],
+   "prerequisites": [
+    "arithmetic_order_of_operations"
+   ],
+   "objective": "Show you can add, subtract, multiply, divide and use the order of operations.",
+   "lesson": {
+    "intro": "Everything from this path, a little harder.",
+    "steps": [
+     "Below zero: 4 − 9 counts down past zero.",
+     "Big times: split 14 × 6 into 10 × 6 and 4 × 6.",
+     "Mixed: brackets, then × and ÷, then + and −."
+    ],
+    "example": {
+     "question": "Work out 14 × 6",
+     "working": [
+      "10 × 6 = 60",
+      "4 × 6 = 24",
+      "60 + 24 = 84"
+     ],
+     "note": "Split, multiply, add."
+    },
+    "remember": "One step per line.",
+    "shown": [
+     "14 * 6",
+     "4 - 9"
+    ]
+   },
+   "opener": null,
+   "tiers": [
+    "challenge"
+   ],
+   "mastery": {
+    "credits": 3,
+    "distinct_templates": 2,
+    "distinct_skills": 2,
+    "independent_at": "challenge",
+    "independent": 2,
+    "move_on_after": 8
+   }
+  }
+ ]
+}

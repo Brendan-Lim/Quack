@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "prompts": [
+    {"id": "digits_multiplication", "display": "2 × 3 = 6", "reference": "2 * 3 = 6", "captures": "Digits and a multiplication sign"},
+    {"id": "division_fractions", "display": "1 ÷ 4 = 1/4", "reference": "1 ÷ 4 = 1/4", "captures": "Division and a simple fraction"},
+    {"id": "algebra_superscripts", "display": "x² + 3x", "reference": "x^2 + 3x", "captures": "Variables, plus signs and superscripts"},
+    {"id": "differentiation", "display": "d/dx(x³) = 3x²", "reference": "d/dx(x^3) = 3x^2", "captures": "Derivative notation, brackets and superscripts"},
+    {"id": "equations", "display": "7x + 1 = 15", "reference": "7x + 1 = 15", "captures": "Variables, digits and equals"},
+    {"id": "brackets_powers", "display": "(x + 2)²", "reference": "(x + 2)^2", "captures": "Brackets, variables and a raised power"}
+  ]
+}

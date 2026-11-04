@@ -1,0 +1,30 @@
+[project]
+name = "quack-api"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["live: calls the real Meta Model API and spends credits; needs MODEL_API_KEY"]
+addopts = "-m 'not live'"
+
+[tool.ruff]
+line-length = 125
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+"quack/services/hint_engine.py" = ["E501"]
+# A table of templates, one per entry, read across.
+"quack/services/lesson_questions.py" = ["E501"]

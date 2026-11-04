@@ -1,0 +1,465 @@
+{
+  "id": "algebra_foundations",
+  "version": 1,
+  "title": "Algebra Foundations",
+  "tagline": "From your first variable to solving equations.",
+  "skills": [
+    {
+      "id": "algebra.variables",
+      "title": "Variables and notation",
+      "objective": "Read and write terms such as 4x, and simplify repeated letters.",
+      "prerequisites": [],
+      "misconceptions": [
+        "variable_dropped",
+        "letters_multiplied",
+        "unlike_terms_combined",
+        "sign_error"
+      ]
+    },
+    {
+      "id": "algebra.substitution",
+      "title": "Substitution",
+      "objective": "Replace a letter with its value and work out the expression, including negative values.",
+      "prerequisites": [
+        "algebra.variables"
+      ],
+      "misconceptions": [
+        "substitution_as_digits",
+        "sign_error"
+      ]
+    },
+    {
+      "id": "algebra.like_terms",
+      "title": "Like terms",
+      "objective": "Combine terms with the same letter by adding or subtracting their coefficients.",
+      "prerequisites": [
+        "algebra.variables"
+      ],
+      "misconceptions": [
+        "variable_dropped",
+        "letters_multiplied",
+        "unlike_terms_combined",
+        "sign_error"
+      ]
+    },
+    {
+      "id": "algebra.simplifying",
+      "title": "Simplifying expressions",
+      "objective": "Simplify expressions with several letter and number terms, keeping each term's sign.",
+      "prerequisites": [
+        "algebra.like_terms"
+      ],
+      "misconceptions": [
+        "variable_dropped",
+        "unlike_terms_combined",
+        "sign_error"
+      ]
+    },
+    {
+      "id": "algebra.brackets",
+      "title": "Brackets and common factors",
+      "objective": "Expand a bracket by multiplying every term inside, and take out a common factor.",
+      "prerequisites": [
+        "algebra.simplifying"
+      ],
+      "misconceptions": [
+        "distribution_incomplete",
+        "common_factor_incomplete",
+        "sign_error",
+        "unlike_terms_combined"
+      ]
+    },
+    {
+      "id": "algebra.linear_equations",
+      "title": "Linear equations",
+      "objective": "Solve one- and two-step equations by doing the same to both sides.",
+      "prerequisites": [
+        "algebra.simplifying",
+        "algebra.brackets"
+      ],
+      "misconceptions": [
+        "incorrect_inverse_operation",
+        "distribution_incomplete"
+      ]
+    }
+  ],
+  "levels": [
+    {
+      "id": "meet_the_variables",
+      "number": 1,
+      "kind": "level",
+      "title": "Meet the Variables",
+      "skills": [
+        "algebra.variables"
+      ],
+      "prerequisites": [],
+      "objective": "Read and write terms such as 4x, and simplify repeated letters.",
+      "lesson": {
+        "intro": "A letter can stand for a number. It's called a variable.",
+        "steps": [
+          "A variable is a letter, like x, that stands for a number.",
+          "4x means 4 × x. The 4 is the coefficient.",
+          "A number on its own, like 7, is a constant.",
+          "x + x + x is three lots of x, so it's 3x."
+        ],
+        "example": {
+          "question": "Simplify x + x + x + x",
+          "working": [
+            "x + x + x + x",
+            "= 4x"
+          ],
+          "note": "Four lots of x."
+        },
+        "remember": "Count the letters, and keep the letter.",
+        "shown": [
+          "x + x + x + x",
+          "x + x + x"
+        ]
+      },
+      "opener": {
+        "template": "variables.repeated_letter",
+        "params": {
+          "count": 5,
+          "letter": "y"
+        }
+      },
+      "tiers": [
+        "learn",
+        "apply",
+        "challenge"
+      ],
+      "mastery": {
+        "credits": 3,
+        "distinct_templates": 2,
+        "independent_at": "challenge",
+        "move_on_after": 8
+      }
+    },
+    {
+      "id": "substitute_and_evaluate",
+      "number": 2,
+      "kind": "level",
+      "title": "Substitute and Evaluate",
+      "skills": [
+        "algebra.substitution"
+      ],
+      "prerequisites": [
+        "meet_the_variables"
+      ],
+      "objective": "Replace a letter with its value and work out the expression, including negative values.",
+      "lesson": {
+        "intro": "If you know what x is, you can work out any expression with x in it.",
+        "steps": [
+          "Substituting means swapping a letter for its value.",
+          "Put the value in brackets: if x = 4, then 3x is 3(4).",
+          "Multiply before you add or subtract.",
+          "A negative value keeps its sign: if x = −2, then 3x = 3(−2) = −6."
+        ],
+        "example": {
+          "question": "If x = 4, work out 3x + 2",
+          "working": [
+            "3(4) + 2",
+            "= 12 + 2",
+            "= 14"
+          ],
+          "note": "3x means 3 × x, so it's 3 × 4, not 34."
+        },
+        "remember": "Brackets around the value keep the signs safe.",
+        "shown": [
+          "3(4) + 2"
+        ]
+      },
+      "opener": {
+        "template": "substitution.positive",
+        "params": {
+          "a": 5,
+          "value": 3,
+          "b": 4
+        }
+      },
+      "tiers": [
+        "learn",
+        "apply",
+        "challenge"
+      ],
+      "mastery": {
+        "credits": 3,
+        "distinct_templates": 2,
+        "independent_at": "challenge",
+        "move_on_after": 8
+      }
+    },
+    {
+      "id": "combine_like_terms",
+      "number": 3,
+      "kind": "level",
+      "title": "Combine Like Terms",
+      "skills": [
+        "algebra.like_terms"
+      ],
+      "prerequisites": [
+        "meet_the_variables"
+      ],
+      "objective": "Combine terms with the same letter by adding or subtracting their coefficients.",
+      "lesson": {
+        "intro": "Terms with the same letter can be put together.",
+        "steps": [
+          "Like terms have the same letters and powers, like 4a and 2a.",
+          "Add or subtract the numbers in front.",
+          "Keep the letter: 4a + 2a = 6a, not 6.",
+          "Unlike terms, like 4a and 2b, stay apart."
+        ],
+        "example": {
+          "question": "Simplify 5y + 4y − 2y",
+          "working": [
+            "5y + 4y − 2y",
+            "= 9y − 2y",
+            "= 7y"
+          ],
+          "note": "Each term keeps the sign in front of it."
+        },
+        "remember": "Same letter and power: combine. Different: leave them.",
+        "shown": [
+          "4a + 2a",
+          "5y + 4y - 2y"
+        ]
+      },
+      "opener": {
+        "template": "like_terms.add_two",
+        "params": {
+          "a": 3,
+          "b": 2,
+          "letter": "x"
+        }
+      },
+      "tiers": [
+        "learn",
+        "apply",
+        "challenge"
+      ],
+      "mastery": {
+        "credits": 3,
+        "distinct_templates": 2,
+        "independent_at": "challenge",
+        "move_on_after": 8
+      }
+    },
+    {
+      "id": "simplify_expressions",
+      "number": 4,
+      "kind": "level",
+      "title": "Simplify Expressions",
+      "skills": [
+        "algebra.simplifying"
+      ],
+      "prerequisites": [
+        "combine_like_terms"
+      ],
+      "objective": "Simplify expressions with several letter and number terms, keeping each term's sign.",
+      "lesson": {
+        "intro": "Longer expressions simplify the same way, one kind of term at a time.",
+        "steps": [
+          "Find the x terms and the number terms.",
+          "Each term takes the sign in front of it: −2x, +5.",
+          "Combine the x terms, then the numbers.",
+          "Write the x term first, then the number."
+        ],
+        "example": {
+          "question": "Simplify 4x + 3 − 2x + 5",
+          "working": [
+            "4x − 2x + 3 + 5",
+            "= 2x + 8"
+          ],
+          "note": "The −2x moved with its minus sign."
+        },
+        "remember": "Move each term with its sign.",
+        "shown": [
+          "4x + 3 - 2x + 5"
+        ]
+      },
+      "opener": {
+        "template": "simplifying.subtract_term",
+        "params": {
+          "a": 6,
+          "b": 1,
+          "c": 2,
+          "d": 4
+        }
+      },
+      "tiers": [
+        "learn",
+        "apply",
+        "challenge"
+      ],
+      "mastery": {
+        "credits": 3,
+        "distinct_templates": 2,
+        "independent_at": "challenge",
+        "move_on_after": 8
+      }
+    },
+    {
+      "id": "brackets_and_factors",
+      "number": 5,
+      "kind": "level",
+      "title": "Brackets and Common Factors",
+      "skills": [
+        "algebra.brackets"
+      ],
+      "prerequisites": [
+        "simplify_expressions"
+      ],
+      "objective": "Expand a bracket by multiplying every term inside, and take out a common factor.",
+      "lesson": {
+        "intro": "A number outside a bracket multiplies everything inside it.",
+        "steps": [
+          "Multiply every term inside: 3(x + 2) = 3x + 6.",
+          "Watch the signs: −2(x − 4) = −2x + 8.",
+          "Factorising goes the other way: find what every term shares.",
+          "6x + 9: both share 3, so 6x + 9 = 3(2x + 3)."
+        ],
+        "example": {
+          "question": "Expand 4(2x − 3)",
+          "working": [
+            "4 × 2x − 4 × 3",
+            "= 8x − 12"
+          ],
+          "note": "The 4 multiplies the 2x and the 3."
+        },
+        "remember": "Multiply every term in the bracket, not just the first.",
+        "shown": [
+          "3(x + 2)",
+          "-2(x - 4)",
+          "6x + 9",
+          "4(2x - 3)"
+        ]
+      },
+      "opener": {
+        "template": "brackets.expand",
+        "params": {
+          "a": 5,
+          "b": 3
+        }
+      },
+      "tiers": [
+        "learn",
+        "apply",
+        "challenge"
+      ],
+      "mastery": {
+        "credits": 3,
+        "distinct_templates": 2,
+        "independent_at": "challenge",
+        "move_on_after": 8
+      }
+    },
+    {
+      "id": "solve_linear_equations",
+      "number": 6,
+      "kind": "level",
+      "title": "Solve Linear Equations",
+      "skills": [
+        "algebra.linear_equations"
+      ],
+      "prerequisites": [
+        "brackets_and_factors"
+      ],
+      "objective": "Solve one- and two-step equations by doing the same to both sides.",
+      "lesson": {
+        "intro": "An equation says two sides are equal. Solving finds the x that makes it true.",
+        "steps": [
+          "Do the same to both sides, so they stay equal.",
+          "Undo + 5 by subtracting 5.",
+          "Undo × 3 by dividing by 3.",
+          "Finish with x = a number, then check it in the original."
+        ],
+        "example": {
+          "question": "Solve 3x + 5 = 17",
+          "working": [
+            "3x = 12",
+            "x = 4"
+          ],
+          "note": "Check: 3(4) + 5 = 17."
+        },
+        "remember": "Whatever you do to one side, do to the other.",
+        "shown": [
+          "3x + 5 = 17"
+        ]
+      },
+      "opener": {
+        "template": "linear_equations.two_step",
+        "params": {
+          "a": 2,
+          "b": 7,
+          "solution": 5
+        }
+      },
+      "tiers": [
+        "learn",
+        "apply",
+        "challenge"
+      ],
+      "mastery": {
+        "credits": 3,
+        "distinct_templates": 2,
+        "independent_at": "challenge",
+        "move_on_after": 8
+      }
+    },
+    {
+      "id": "algebra_adventure",
+      "number": 7,
+      "kind": "challenge",
+      "title": "Algebra Adventure",
+      "skills": [
+        "algebra.substitution",
+        "algebra.like_terms",
+        "algebra.simplifying",
+        "algebra.brackets",
+        "algebra.linear_equations"
+      ],
+      "prerequisites": [
+        "meet_the_variables",
+        "substitute_and_evaluate",
+        "combine_like_terms",
+        "simplify_expressions",
+        "brackets_and_factors",
+        "solve_linear_equations"
+      ],
+      "objective": "Use everything from Algebra Foundations together, on your own.",
+      "lesson": {
+        "intro": "No new rules here: just you, your pencil and everything you've learned.",
+        "steps": [
+          "Read each question: simplify, expand, factorise, work out or solve?",
+          "Work line by line, so Quack can follow you.",
+          "Check your answer by substituting when you can."
+        ],
+        "example": {
+          "question": "Simplify 2(x + 3) + 3(x − 1)",
+          "working": [
+            "2x + 6 + 3x − 3",
+            "= 5x + 3"
+          ],
+          "note": "Expand both brackets, then combine like terms."
+        },
+        "remember": "One careful line at a time.",
+        "shown": [
+          "2(x + 3) + 3(x - 1)"
+        ]
+      },
+      "opener": null,
+      "tiers": [
+        "challenge",
+        "demonstrate"
+      ],
+      "mastery": {
+        "credits": 4,
+        "distinct_templates": 3,
+        "distinct_skills": 3,
+        "independent_at": "demonstrate",
+        "independent": 3,
+        "move_on_after": 10
+      }
+    }
+  ]
+}

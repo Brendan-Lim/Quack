@@ -1,0 +1,171 @@
+{
+ "id": "calculus",
+ "version": 1,
+ "title": "Calculus",
+ "tagline": "The power rule, and integrating it back.",
+ "skills": [
+  {
+   "id": "calculus.power_rule",
+   "title": "The power rule",
+   "objective": "Differentiate powers of x and sums of them.",
+   "prerequisites": [],
+   "misconceptions": []
+  },
+  {
+   "id": "calculus.integration",
+   "title": "Integration",
+   "objective": "Integrate powers of x, with + C.",
+   "prerequisites": [
+    "calculus.power_rule"
+   ],
+   "misconceptions": []
+  }
+ ],
+ "levels": [
+  {
+   "id": "calculus_power_rule",
+   "number": 1,
+   "kind": "level",
+   "title": "The Power Rule",
+   "skills": [
+    "calculus.power_rule"
+   ],
+   "prerequisites": [],
+   "objective": "Differentiate a power of x: bring the power down, and take one off it.",
+   "lesson": {
+    "intro": "A derivative is a rate of change. For powers of x there's a rule.",
+    "steps": [
+     "d/dx(xⁿ) = n xⁿ⁻¹.",
+     "A number in front stays: d/dx(3x⁴) = 12x³.",
+     "A number on its own differentiates to 0. No + C."
+    ],
+    "example": {
+     "question": "Differentiate 2x⁵",
+     "working": [
+      "5 × 2 = 10",
+      "power 5 − 1 = 4",
+      "= 10x⁴"
+     ],
+     "note": "Bring the 5 down, then 4 is the new power."
+    },
+    "remember": "Down, then one less.",
+    "shown": [
+     "d/dx(2x^5)",
+     "d/dx(3x^4)"
+    ]
+   },
+   "opener": {
+    "template": "calculus.differentiate_power",
+    "params": {
+     "n": 3
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "calculus_integration",
+   "number": 2,
+   "kind": "level",
+   "title": "Integration",
+   "skills": [
+    "calculus.integration"
+   ],
+   "prerequisites": [
+    "calculus_power_rule"
+   ],
+   "objective": "Integrate a power of x: add one to the power, divide by the new power, and add + C.",
+   "lesson": {
+    "intro": "Integrating undoes differentiating.",
+    "steps": [
+     "∫ xⁿ dx = xⁿ⁺¹ ÷ (n + 1) + C.",
+     "Add + C: any number differentiates to 0, so it could have been there.",
+     "Check by differentiating your answer."
+    ],
+    "example": {
+     "question": "Integrate 8x³",
+     "working": [
+      "power 3 + 1 = 4",
+      "8 ÷ 4 = 2",
+      "= 2x⁴ + C"
+     ],
+     "note": "Differentiate 2x⁴ to check: 8x³."
+    },
+    "remember": "Up one, divide, + C.",
+    "shown": [
+     "∫ 8x^3 dx"
+    ]
+   },
+   "opener": {
+    "template": "calculus.integrate_power",
+    "params": {
+     "n": 2
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "calculus_challenge",
+   "number": 3,
+   "kind": "challenge",
+   "title": "Calculus Challenge",
+   "skills": [
+    "calculus.power_rule",
+    "calculus.integration"
+   ],
+   "prerequisites": [
+    "calculus_integration"
+   ],
+   "objective": "Differentiate and integrate sums of terms.",
+   "lesson": {
+    "intro": "Do each term on its own.",
+    "steps": [
+     "Differentiating: each term by the power rule, and a number alone goes to 0.",
+     "Integrating: each term up one power, and one + C at the end.",
+     "Read the question: differentiate or integrate?"
+    ],
+    "example": {
+     "question": "Differentiate 2x³ + 5x + 4",
+     "working": [
+      "6x² + 5 + 0",
+      "= 6x² + 5"
+     ],
+     "note": "The 4 differentiates to 0."
+    },
+    "remember": "A derivative has no + C. An integral does.",
+    "shown": [
+     "d/dx(2x^3 + 5x + 4)"
+    ]
+   },
+   "opener": null,
+   "tiers": [
+    "challenge"
+   ],
+   "mastery": {
+    "credits": 3,
+    "distinct_templates": 2,
+    "distinct_skills": 2,
+    "independent_at": "challenge",
+    "independent": 2,
+    "move_on_after": 8
+   }
+  }
+ ]
+}

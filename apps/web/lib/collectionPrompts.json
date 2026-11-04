@@ -1,0 +1,829 @@
+[
+ {
+  "id": "st_i_mul_2x3",
+  "lines": [
+   "2*3=5"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 0,
+  "operation": "arithmetic",
+  "group": "standalone_invalid",
+  "tags": [
+   "standalone"
+  ]
+ },
+ {
+  "id": "st_i_mul_3x4",
+  "lines": [
+   "3*4=10"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 0,
+  "operation": "arithmetic",
+  "group": "standalone_invalid",
+  "tags": [
+   "standalone"
+  ]
+ },
+ {
+  "id": "st_v_mul_2x3",
+  "lines": [
+   "2*3=6"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "arithmetic",
+  "group": "standalone_valid",
+  "tags": [
+   "standalone"
+  ]
+ },
+ {
+  "id": "st_v_mul_3x4",
+  "lines": [
+   "3*4=12"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "arithmetic",
+  "group": "standalone_valid",
+  "tags": [
+   "standalone"
+  ]
+ },
+ {
+  "id": "st_i_add",
+  "lines": [
+   "7+5=11"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 0,
+  "operation": "arithmetic",
+  "group": "standalone_invalid",
+  "tags": [
+   "standalone"
+  ]
+ },
+ {
+  "id": "st_v_add",
+  "lines": [
+   "7+5=12"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "arithmetic",
+  "group": "standalone_valid",
+  "tags": [
+   "standalone"
+  ]
+ },
+ {
+  "id": "st_i_diff",
+  "lines": [
+   "d/dx(x^3+2x)=3x+2"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 0,
+  "operation": "differentiate",
+  "group": "standalone_invalid",
+  "tags": [
+   "standalone",
+   "superscript"
+  ]
+ },
+ {
+  "id": "st_v_diff",
+  "lines": [
+   "d/dx(x^3+2x)=3x^2+2"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "standalone_valid",
+  "tags": [
+   "standalone",
+   "superscript"
+  ]
+ },
+ {
+  "id": "st_i_diff_power",
+  "lines": [
+   "d/dx(x^3)=3x"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 0,
+  "operation": "differentiate",
+  "group": "standalone_invalid",
+  "tags": [
+   "standalone",
+   "superscript"
+  ]
+ },
+ {
+  "id": "st_i_dist",
+  "lines": [
+   "2(x+3)=2x+3"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 0,
+  "operation": "expand",
+  "group": "standalone_invalid",
+  "tags": [
+   "standalone"
+  ]
+ },
+ {
+  "id": "demo_algebra",
+  "lines": [
+   "2(x+3)",
+   "=2x+3"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "expand",
+  "group": "algebra_invalid",
+  "tags": [
+   "demo"
+  ]
+ },
+ {
+  "id": "demo_diff",
+  "lines": [
+   "d/dx(x^3+2x)",
+   "=3x+2"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "demo",
+   "superscript"
+  ]
+ },
+ {
+  "id": "demo_correct",
+  "lines": [
+   "3(x+2)",
+   "=3x+6"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "algebra_valid",
+  "tags": [
+   "demo"
+  ]
+ },
+ {
+  "id": "alg_v_expand",
+  "lines": [
+   "2(x+3)",
+   "=2x+6"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "algebra_valid",
+  "tags": []
+ },
+ {
+  "id": "alg_v_two_brackets",
+  "lines": [
+   "(x+1)(x+2)",
+   "=x^2+3x+2"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "algebra_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "alg_v_like_terms",
+  "lines": [
+   "2x+3x+4",
+   "=5x+4"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "combine_like_terms",
+  "group": "algebra_valid",
+  "tags": []
+ },
+ {
+  "id": "alg_v_negative",
+  "lines": [
+   "-2(x-4)",
+   "=-2x+8"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "algebra_valid",
+  "tags": []
+ },
+ {
+  "id": "alg_v_square",
+  "lines": [
+   "(x+3)^2",
+   "=x^2+6x+9"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "algebra_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "alg_v_factor",
+  "lines": [
+   "x^2+5x+6",
+   "=(x+2)(x+3)"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "factor",
+  "group": "algebra_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "alg_v_arith",
+  "lines": [
+   "12+7",
+   "=19"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "arithmetic",
+  "group": "algebra_valid",
+  "tags": []
+ },
+ {
+  "id": "alg_v_chain",
+  "lines": [
+   "3(x+1)+2",
+   "=3x+3+2",
+   "=3x+5"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "algebra_valid",
+  "tags": []
+ },
+ {
+  "id": "alg_v_unconventional",
+  "lines": [
+   "(x+1)(x+2)",
+   "=x(x+3)+2"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "algebra_valid",
+  "tags": [
+   "unconventional"
+  ]
+ },
+ {
+  "id": "alg_v_equation",
+  "lines": [
+   "2x+3=7",
+   "2x=4",
+   "x=2"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "solve_equation",
+  "group": "algebra_valid",
+  "tags": []
+ },
+ {
+  "id": "alg_v_quadratic",
+  "lines": [
+   "x^2-5x+6=0",
+   "(x-2)(x-3)=0"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "solve_equation",
+  "group": "algebra_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "alg_i_distribution",
+  "lines": [
+   "4(x+5)",
+   "=4x+5"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "expand",
+  "group": "algebra_invalid",
+  "tags": []
+ },
+ {
+  "id": "alg_i_sign",
+  "lines": [
+   "-(x-3)",
+   "=-x-3"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "expand",
+  "group": "algebra_invalid",
+  "tags": []
+ },
+ {
+  "id": "alg_i_square",
+  "lines": [
+   "(x+2)^2",
+   "=x^2+4"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "expand",
+  "group": "algebra_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "alg_i_like_terms",
+  "lines": [
+   "3x+4x",
+   "=8x"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "combine_like_terms",
+  "group": "algebra_invalid",
+  "tags": []
+ },
+ {
+  "id": "alg_i_arith",
+  "lines": [
+   "15-8",
+   "=9"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "arithmetic",
+  "group": "algebra_invalid",
+  "tags": []
+ },
+ {
+  "id": "alg_i_two_brackets",
+  "lines": [
+   "(x+1)(x+2)",
+   "=x^2+2"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "expand",
+  "group": "algebra_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "alg_i_factor",
+  "lines": [
+   "x^2+5x+6",
+   "=(x+1)(x+6)"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "factor",
+  "group": "algebra_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "alg_i_equation_sign",
+  "lines": [
+   "2x+3=7",
+   "2x=10"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "solve_equation",
+  "group": "algebra_invalid",
+  "tags": []
+ },
+ {
+  "id": "alg_i_equation_divide",
+  "lines": [
+   "3x=12",
+   "x=36"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "solve_equation",
+  "group": "algebra_invalid",
+  "tags": []
+ },
+ {
+  "id": "alg_i_later_step",
+  "lines": [
+   "2(x+3)+1",
+   "=2x+6+1",
+   "=2x+8"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 2,
+  "operation": "expand",
+  "group": "algebra_invalid",
+  "tags": []
+ },
+ {
+  "id": "diff_v_power",
+  "lines": [
+   "d/dx(x^4)",
+   "=4x^3"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_v_sum",
+  "lines": [
+   "d/dx(x^2+3x)",
+   "=2x+3"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_v_constant",
+  "lines": [
+   "d/dx(5x^2+7)",
+   "=10x"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_v_poly",
+  "lines": [
+   "d/dx(2x^3-x+1)",
+   "=6x^2-1"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_v_leibniz",
+  "lines": [
+   "y=x^3",
+   "dy/dx=3x^2"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_v_function",
+  "lines": [
+   "f(x)=x^2+x",
+   "f'(x)=2x+1"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_v_chain",
+  "lines": [
+   "d/dx((2x+1)^3)",
+   "=6(2x+1)^2"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "superscript",
+   "nested"
+  ]
+ },
+ {
+  "id": "diff_v_sin",
+  "lines": [
+   "d/dx(sin(2x))",
+   "=2cos(2x)"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "differentiate",
+  "group": "diff_valid",
+  "tags": [
+   "nested"
+  ]
+ },
+ {
+  "id": "diff_i_exponent",
+  "lines": [
+   "d/dx(x^4)",
+   "=4x^4"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_i_coefficient",
+  "lines": [
+   "d/dx(x^5)",
+   "=x^4"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_i_constant",
+  "lines": [
+   "d/dx(x^2+9)",
+   "=2x+9"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_i_missing",
+  "lines": [
+   "d/dx(x^3+4x)",
+   "=3x^2"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_i_leibniz",
+  "lines": [
+   "y=x^3",
+   "dy/dx=3x"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_i_function",
+  "lines": [
+   "f(x)=x^2+x",
+   "f'(x)=2x"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "diff_i_chain",
+  "lines": [
+   "d/dx((2x+1)^3)",
+   "=3(2x+1)^2"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "superscript",
+   "nested"
+  ]
+ },
+ {
+  "id": "diff_i_sin",
+  "lines": [
+   "d/dx(sin(2x))",
+   "=cos(2x)"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "differentiate",
+  "group": "diff_invalid",
+  "tags": [
+   "nested"
+  ]
+ },
+ {
+  "id": "abs_integral",
+  "lines": [
+   "∫xdx"
+  ],
+  "expected": "abstain",
+  "errorLine": null,
+  "operation": "unknown",
+  "group": "abstain",
+  "tags": [
+   "unsupported"
+  ]
+ },
+ {
+  "id": "abs_inequality",
+  "lines": [
+   "2x+1<7"
+  ],
+  "expected": "abstain",
+  "errorLine": null,
+  "operation": "unknown",
+  "group": "abstain",
+  "tags": [
+   "unsupported"
+  ]
+ },
+ {
+  "id": "abs_incomplete",
+  "lines": [
+   "2(x+3)",
+   "=2x+"
+  ],
+  "expected": "abstain",
+  "errorLine": null,
+  "operation": "unknown",
+  "group": "abstain",
+  "tags": [
+   "incomplete"
+  ]
+ },
+ {
+  "id": "abs_substitution",
+  "lines": [
+   "2x+3",
+   "=7"
+  ],
+  "expected": "abstain",
+  "errorLine": null,
+  "operation": "unknown",
+  "group": "abstain",
+  "tags": [
+   "unclear_transition"
+  ]
+ },
+ {
+  "id": "abs_lost_root",
+  "lines": [
+   "x^2=x",
+   "x=1"
+  ],
+  "expected": "abstain",
+  "errorLine": null,
+  "operation": "unknown",
+  "group": "abstain",
+  "tags": [
+   "domain"
+  ]
+ },
+ {
+  "id": "hard_messy_valid",
+  "lines": [
+   "(x+1)(x+3)",
+   "=x^2+4x+3"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "expand",
+  "group": "hard",
+  "tags": [
+   "poor_handwriting",
+   "superscript"
+  ]
+ },
+ {
+  "id": "hard_messy_invalid",
+  "lines": [
+   "5(x+2)",
+   "=5x+2"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "expand",
+  "group": "hard",
+  "tags": [
+   "poor_handwriting"
+  ]
+ },
+ {
+  "id": "hard_super_valid",
+  "lines": [
+   "x^2*x^3",
+   "=x^5"
+  ],
+  "expected": "no_error",
+  "errorLine": null,
+  "operation": "simplify",
+  "group": "hard",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "hard_super_invalid",
+  "lines": [
+   "x^2*x^3",
+   "=x^6"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "simplify",
+  "group": "hard",
+  "tags": [
+   "superscript"
+  ]
+ },
+ {
+  "id": "hard_fraction_invalid",
+  "lines": [
+   "1/2+1/3",
+   "=2/5"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "arithmetic",
+  "group": "hard",
+  "tags": [
+   "fraction"
+  ]
+ },
+ {
+  "id": "hard_two_errors",
+  "lines": [
+   "2(x+3)",
+   "=2x+3",
+   "=5x+3"
+  ],
+  "expected": "confirmed_error",
+  "errorLine": 1,
+  "operation": "expand",
+  "group": "hard",
+  "tags": [
+   "two_errors"
+  ]
+ }
+]

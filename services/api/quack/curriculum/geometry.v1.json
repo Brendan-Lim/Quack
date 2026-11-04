@@ -1,0 +1,173 @@
+{
+ "id": "geometry",
+ "version": 1,
+ "title": "Geometry",
+ "tagline": "Perimeter and area of rectangles, squares and triangles.",
+ "skills": [
+  {
+   "id": "geometry.perimeter",
+   "title": "Perimeter",
+   "objective": "Find the distance around a rectangle or square.",
+   "prerequisites": [],
+   "misconceptions": []
+  },
+  {
+   "id": "geometry.area",
+   "title": "Area",
+   "objective": "Find the area of a rectangle or triangle.",
+   "prerequisites": [
+    "geometry.perimeter"
+   ],
+   "misconceptions": []
+  }
+ ],
+ "levels": [
+  {
+   "id": "geometry_perimeter",
+   "number": 1,
+   "kind": "level",
+   "title": "Perimeter",
+   "skills": [
+    "geometry.perimeter"
+   ],
+   "prerequisites": [],
+   "objective": "Add up every side to find the perimeter.",
+   "lesson": {
+    "intro": "The perimeter is the distance all the way round a shape.",
+    "steps": [
+     "A rectangle has two lengths and two widths.",
+     "Perimeter = 2 × (length + width).",
+     "Write the number only: the question says the units."
+    ],
+    "example": {
+     "question": "A rectangle is 9 cm by 4 cm. Find its perimeter.",
+     "working": [
+      "2 × (9 + 4)",
+      "= 2 × 13",
+      "= 26"
+     ],
+     "note": "So the perimeter is 26 cm."
+    },
+    "remember": "Every side counts once.",
+    "shown": [
+     "2(9 + 4)"
+    ]
+   },
+   "opener": {
+    "template": "geometry.rectangle_perimeter",
+    "params": {
+     "l": 7,
+     "w": 3
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "geometry_area",
+   "number": 2,
+   "kind": "level",
+   "title": "Area",
+   "skills": [
+    "geometry.area"
+   ],
+   "prerequisites": [
+    "geometry_perimeter"
+   ],
+   "objective": "Multiply to find the area of a rectangle, and halve it for a triangle.",
+   "lesson": {
+    "intro": "Area is the space inside a shape, measured in squares.",
+    "steps": [
+     "Rectangle: area = length × width.",
+     "Triangle: area = ½ × base × perpendicular height.",
+     "Area is in square units, like cm²."
+    ],
+    "example": {
+     "question": "A triangle has base 6 cm and height 5 cm. Find its area.",
+     "working": [
+      "½ × 6 × 5",
+      "= 3 × 5",
+      "= 15"
+     ],
+     "note": "So the area is 15 cm²."
+    },
+    "remember": "A triangle is half a rectangle.",
+    "shown": [
+     "1/2 * 6 * 5"
+    ]
+   },
+   "opener": {
+    "template": "geometry.rectangle_area",
+    "params": {
+     "l": 8,
+     "w": 3
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "geometry_challenge",
+   "number": 3,
+   "kind": "challenge",
+   "title": "Measurement Challenge",
+   "skills": [
+    "geometry.perimeter",
+    "geometry.area"
+   ],
+   "prerequisites": [
+    "geometry_area"
+   ],
+   "objective": "Choose the right formula, and use it.",
+   "lesson": {
+    "intro": "Read carefully: is it the distance round, or the space inside?",
+    "steps": [
+     "Perimeter adds the sides.",
+     "Area multiplies.",
+     "A square's side times itself is its area."
+    ],
+    "example": {
+     "question": "A square has an area of 25 cm². Find its perimeter.",
+     "working": [
+      "Side: 5 × 5 = 25, so 5",
+      "4 × 5",
+      "= 20"
+     ],
+     "note": "So the perimeter is 20 cm."
+    },
+    "remember": "Perimeter round, area inside.",
+    "shown": [
+     "4 * sqrt(25)"
+    ]
+   },
+   "opener": null,
+   "tiers": [
+    "challenge"
+   ],
+   "mastery": {
+    "credits": 3,
+    "distinct_templates": 2,
+    "distinct_skills": 2,
+    "independent_at": "challenge",
+    "independent": 2,
+    "move_on_after": 8
+   }
+  }
+ ]
+}

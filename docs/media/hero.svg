@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400" role="img" aria-labelledby="title desc">
+<title id="title">Quack — Your little maths companion.</title>
+<desc id="desc">The original yellow duck on warm cream paper, beside the words Write your maths. Learn from your mistakes. Grow with Quack.</desc>
+<rect width="1280" height="400" rx="28" fill="#FFFCF5"/>
+<circle cx="1055" cy="196" r="132" fill="#FFF1C2"/>
+<g stroke="#E8E1D4" stroke-width="1"><path d="M70 315H1210M70 345H1210M70 375H1210"/></g>
+<rect x="66" y="57" width="240" height="30" rx="15" fill="#FFF0BA"/>
+<text x="186" y="77" text-anchor="middle" fill="#6B5422" font-family="Arial,sans-serif" font-size="12" letter-spacing="1.8">A LITTLE HELP AS YOU WRITE</text>
+<text x="64" y="181" fill="#282723" font-family="Arial,sans-serif" font-weight="700" font-size="96" letter-spacing="-5">Quack</text>
+<text x="69" y="231" fill="#4B483F" font-family="Arial,sans-serif" font-size="28">Your little maths companion.</text>
+<text x="70" y="284" fill="#777164" font-family="Arial,sans-serif" font-size="19">Write your maths. Learn from your mistakes. Grow with Quack.</text>
+<g transform="translate(896 50) scale(2.65)">      <ellipse class="duck-shadow" cx="58" cy="112" rx="34" ry="4" fill="#262626" opacity="0.08" />
+      <g class="duck-all">
+        <g fill="#F4A340">
+          <path d="M42 100 q-2 8 -8 10 q6 3 15 0 q-2 -5 -1 -10z" />
+          <path d="M66 100 q-2 8 -8 10 q6 3 15 0 q-2 -5 -1 -10z" />
+        </g>
+        <g class="duck-body">
+          <path
+            d="M15 58 C22 66 30 66 37 62 C50 53 72 54 84 66 C96 79 90 104 60 105 C32 106 18 92 19 76 C19.4 69 17 64 15 58Z"
+            fill="#FFD95A"
+          />
+          <path
+            d="M24 83 C30 97 46 104 60 105 C76 104.500 87 96 88 83 C80 94 66 98 52 96 C40 94 30 90 24 83Z"
+            fill="#F7C53E"
+            opacity="0.55"
+          />
+          <path class="duck-wing" d="M34 73 C42 64 58 65 64 74 C60 86 46 90 38 85 C34 82 32 77 34 73Z" fill="#F9CD45" />
+        </g>
+        <g class="duck-head">
+          <circle cx="72" cy="42" r="25" fill="#FFD95A" />
+          <path d="M56 28 Q60 18 68 20 Q63 24 62 30Z" fill="#FFD95A" />
+          <ellipse cx="66" cy="52" rx="6" ry="3.600" fill="#F4A340" opacity="0.28" />
+          <g class="duck-beak">
+            <path class="duck-beak-lower" d="M92 47 Q102 49 104 52 Q99 57 90 54Z" fill="#E8913A" />
+            <path d="M92 39 Q104 40 108 46 Q102 52 91 50 Q88 45 92 39Z" fill="#F4A340" />
+          </g>
+          <g class="duck-eyes">
+            <g class="duck-eye-open">
+              <circle cx="80" cy="36" r="5" fill="#262626" />
+              <circle cx="81.800" cy="34" r="1.700" fill="#FFFFFF" />
+            </g>
+          </g>
+        </g>
+      </g>
+</g>
+<text x="70" y="367" fill="#938B7A" font-family="Arial,sans-serif" font-size="13" letter-spacing="1">HANDWRITING · HELPFUL HINTS · STUDENT-LED CORRECTIONS</text>
+</svg>

@@ -1,0 +1,237 @@
+{
+ "id": "fractions_decimals",
+ "version": 1,
+ "title": "Fractions and Decimals",
+ "tagline": "Equivalent fractions, adding and multiplying them, and decimals.",
+ "skills": [
+  {
+   "id": "fractions.equivalent",
+   "title": "Equivalent fractions",
+   "objective": "Simplify a fraction to its lowest terms.",
+   "prerequisites": [],
+   "misconceptions": []
+  },
+  {
+   "id": "fractions.operations",
+   "title": "Fraction operations",
+   "objective": "Add, subtract and multiply fractions.",
+   "prerequisites": [
+    "fractions.equivalent"
+   ],
+   "misconceptions": []
+  },
+  {
+   "id": "fractions.decimals",
+   "title": "Fractions and decimals",
+   "objective": "Change between fractions and decimals.",
+   "prerequisites": [
+    "fractions.equivalent"
+   ],
+   "misconceptions": []
+  }
+ ],
+ "levels": [
+  {
+   "id": "fractions_equivalent",
+   "number": 1,
+   "kind": "level",
+   "title": "Equivalent Fractions",
+   "skills": [
+    "fractions.equivalent"
+   ],
+   "prerequisites": [],
+   "objective": "Simplify a fraction by dividing the top and bottom by the same number.",
+   "lesson": {
+    "intro": "The same amount can be written as different fractions.",
+    "steps": [
+     "2/4 and 1/2 are the same amount.",
+     "Divide the top and the bottom by a number that goes into both.",
+     "Keep going until nothing else divides both: that's its lowest terms."
+    ],
+    "example": {
+     "question": "Simplify 12/18",
+     "working": [
+      "÷ 2: 6/9",
+      "÷ 3: 2/3"
+     ],
+     "note": "Dividing by 6 at once does it in one step."
+    },
+    "remember": "Do the same to the top and the bottom.",
+    "shown": [
+     "12/18",
+     "2/4"
+    ]
+   },
+   "opener": {
+    "template": "fractions.simplify",
+    "params": {
+     "p": 3,
+     "q": 5,
+     "k": 2
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "fractions_operations",
+   "number": 2,
+   "kind": "level",
+   "title": "Adding and Multiplying Fractions",
+   "skills": [
+    "fractions.operations"
+   ],
+   "prerequisites": [
+    "fractions_equivalent"
+   ],
+   "objective": "Add fractions with a common bottom, and multiply tops and bottoms.",
+   "lesson": {
+    "intro": "To add fractions, their bottoms must match.",
+    "steps": [
+     "Same bottom: add the tops, keep the bottom. 1/5 + 2/5 = 3/5.",
+     "Different bottoms: change both to a bottom they share first.",
+     "To multiply: tops times tops, bottoms times bottoms."
+    ],
+    "example": {
+     "question": "Work out 1/4 + 1/6",
+     "working": [
+      "1/4 = 3/12 and 1/6 = 2/12",
+      "3/12 + 2/12",
+      "= 5/12"
+     ],
+     "note": "12 is the smallest bottom both go into."
+    },
+    "remember": "Never add the bottoms.",
+    "shown": [
+     "1/4 + 1/6",
+     "1/5 + 2/5"
+    ]
+   },
+   "opener": {
+    "template": "fractions.add_same_bottom",
+    "params": {
+     "a": 2,
+     "b": 3,
+     "d": 7
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "fractions_decimals",
+   "number": 3,
+   "kind": "level",
+   "title": "Fractions and Decimals",
+   "skills": [
+    "fractions.decimals"
+   ],
+   "prerequisites": [
+    "fractions_equivalent"
+   ],
+   "objective": "Change a fraction to a decimal, and a decimal to a fraction in its lowest terms.",
+   "lesson": {
+    "intro": "A decimal is a fraction with a bottom of 10, 100 or 1000.",
+    "steps": [
+     "Make the bottom 10 or 100: 3/4 = 75/100 = 0.75.",
+     "Going back: 0.35 = 35/100, then simplify to 7/20."
+    ],
+    "example": {
+     "question": "Write 3/20 as a decimal",
+     "working": [
+      "3/20 = 15/100",
+      "= 0.15"
+     ],
+     "note": "Multiply the top and the bottom by 5."
+    },
+    "remember": "Tenths, then hundredths.",
+    "shown": [
+     "3/20",
+     "3/4",
+     "0.35"
+    ]
+   },
+   "opener": {
+    "template": "fractions.to_decimal",
+    "params": {
+     "p": 1,
+     "q": 4
+    }
+   },
+   "tiers": [
+    "learn",
+    "apply"
+   ],
+   "mastery": {
+    "credits": 2,
+    "distinct_templates": 2,
+    "independent_at": "apply",
+    "move_on_after": 6
+   }
+  },
+  {
+   "id": "fractions_challenge",
+   "number": 4,
+   "kind": "challenge",
+   "title": "Fractions Challenge",
+   "skills": [
+    "fractions.equivalent",
+    "fractions.operations",
+    "fractions.decimals"
+   ],
+   "prerequisites": [
+    "fractions_operations",
+    "fractions_decimals"
+   ],
+   "objective": "Show you can simplify, add, subtract and convert fractions and decimals.",
+   "lesson": {
+    "intro": "Everything from this path, a little harder.",
+    "steps": [
+     "Simplify with the biggest number that divides both.",
+     "Take away fractions with the same bottom.",
+     "Add decimals with their points lined up."
+    ],
+    "example": {
+     "question": "Work out 0.45 + 0.3",
+     "working": [
+      "0.45 + 0.30",
+      "= 0.75"
+     ],
+     "note": "0.3 is 0.30."
+    },
+    "remember": "Line up the decimal points.",
+    "shown": [
+     "0.45 + 0.3"
+    ]
+   },
+   "opener": null,
+   "tiers": [
+    "challenge"
+   ],
+   "mastery": {
+    "credits": 3,
+    "distinct_templates": 2,
+    "distinct_skills": 2,
+    "independent_at": "challenge",
+    "independent": 2,
+    "move_on_after": 8
+   }
+  }
+ ]
+}

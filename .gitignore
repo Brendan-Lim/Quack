@@ -1,0 +1,76 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+.next-e2e/
+.next-e2e-accounts/
+*.tsbuildinfo
+next-env.d.ts
+
+# Test output
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/coverage/
+
+# Runtime data: usage ledger and anything derived from student handwriting
+services/api/var/
+evals/dataset/private/
+evals/results/*/images/
+
+.DS_Store
+
+# Public-release hygiene
+.venv
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.pem
+*.key
+*.log
+.envrc
+.aws/
+.codex/
+.agents/
+*.mov
+*.mp4
+*.webm
+docs/reports/*trace*.json
+docs/reports/usage-snapshot.txt
+evals/results/**/*.jsonl
+
+.next-capture-accounts/
+
+evals/results/**/*.json
+
+# Development instructions and owner working records
+AGENTS.md
+CLAUDE.md
+.codex/
+.agents/
+docs/reports/
+docs/*REPORT*
+docs/*QA*
+docs/*EVALUATION*
+docs/RELEASE_PROVENANCE.json
+docs/hackathon/CODEX_DEPLOYMENT_HANDOFF.md
+docs/hackathon/DEMO_SCRIPT.md
+docs/hackathon/SUBMISSION_CHECKLIST.md
+docs/hackathon/SUBMISSION.md
+evals/results/
+QUACK_PUBLICATION_RECEIPT.json
+*-private/

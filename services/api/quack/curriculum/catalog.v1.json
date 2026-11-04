@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "paths": [
+    {
+      "id": "arithmetic_foundations",
+      "title": "Arithmetic Foundations",
+      "tagline": "Adding, taking away, times tables and the order of operations.",
+      "status": "available",
+      "course": "arithmetic_foundations.v1.json"
+    },
+    {
+      "id": "fractions_decimals",
+      "title": "Fractions and Decimals",
+      "tagline": "Equivalent fractions, adding and multiplying them, and decimals.",
+      "status": "available",
+      "course": "fractions_decimals.v1.json"
+    },
+    {
+      "id": "algebra_foundations",
+      "title": "Algebra Foundations",
+      "tagline": "From your first variable to solving equations.",
+      "status": "available",
+      "course": "algebra_foundations.v1.json"
+    },
+    {
+      "id": "geometry",
+      "title": "Geometry",
+      "tagline": "Perimeter and area of rectangles, squares and triangles.",
+      "status": "available",
+      "course": "geometry.v1.json"
+    },
+    {
+      "id": "trigonometry",
+      "title": "Trigonometry",
+      "tagline": "Sine, cosine and tangent in right-angled triangles.",
+      "status": "available",
+      "course": "trigonometry.v1.json"
+    },
+    {
+      "id": "calculus",
+      "title": "Calculus",
+      "tagline": "The power rule, and integrating it back.",
+      "status": "available",
+      "course": "calculus.v1.json"
+    }
+  ]
+}
