@@ -43,6 +43,7 @@ The API reads `.env` at the repository root or `services/api/.env`, plus environ
 | `QUACK_DATABASE_URL` | PostgreSQL connection string; backend secret |
 | `QUACK_SQLITE_PATH` | Local SQLite alternative; needs a private durable writable directory |
 | `QUACK_LEDGER_PATH` | Private durable model-usage ledger path |
+| `QUACK_LEDGER_BACKEND` | `file` locally, or `postgres` for durable precharged production quotas |
 | `QUACK_BUDGET_PROJECT_USD`, `QUACK_BUDGET_HOURLY_USD` | Overall and hourly model-spending ceilings |
 | `QUACK_BUDGET_SESSION_USD`, `QUACK_BUDGET_REQUEST_USD` | Per-session and per-request ceilings |
 | `QUACK_RATE_LIMIT_PER_MINUTE`, `QUACK_GLOBAL_RATE_LIMIT_PER_MINUTE` | Per-client and global request limits |
@@ -78,7 +79,7 @@ cd services/api
 
 Changing `API_URL` requires rebuilding the frontend. Static-only hosting does not supply the current API proxy. Use HTTPS and exact origins; never put model keys or service-role keys in `NEXT_PUBLIC_*` variables.
 
-Use one API process/replica: session state, rate limits, caches and budget reservations are not distributed. The verifier starts killable SymPy processes, so a subprocess-restricted function runtime is unsuitable. Durable PostgreSQL does not make the separate usage ledger durable. Ephemeral SQLite or ledger storage loses persistence on restart.
+Use one API process/replica: session state, rate limits and caches are not distributed. The verifier starts killable SymPy processes, so a subprocess-restricted function runtime is unsuitable. PostgreSQL accounting coordinates its quotas across independent connections; file accounting requires durable storage and is unsuitable for ephemeral serverless instances. Ephemeral SQLite loses learning progress on restart.
 
 In production, development trace/usage routes, session inspection and API documentation should be unavailable. Request bodies are capped at 10 MB, audio at 8 MB; proxy timeouts must accommodate recognition. `/api/health` reports whether a key is configured, rather than proving live inference succeeds.
 
@@ -96,9 +97,9 @@ The CPU-only Docker image uses Python 3.12, the locked dependency constraints, a
 docker build -f services/api/Dockerfile -t quack-api .
 ```
 
-Build from this repository root so its explicit Docker context policy applies. Configure Supabase Auth, PostgreSQL with TLS and exact CORS origins through the hosting provider's secret store. Mount private durable storage at `/data` if using its ledger path. The image defaults every model budget to zero. An ephemeral `/data` is unsuitable for a nonzero budget, and a mounted disk alone does not make in-flight reservations crash-safe or distributed. The generic image does not validate a provider's billing controls.
+Build from this repository root so its explicit Docker context policy applies. Configure Supabase Auth, PostgreSQL with TLS and exact CORS origins through the hosting provider's secret store. The image defaults every model budget to zero and selects PostgreSQL accounting, which requires no ledger volume. The file alternative needs private durable storage at `/data`; a mounted disk alone does not make its in-flight reservations crash-safe or distributed. The generic image does not validate a provider's billing controls.
 
-`services/api/modal_app.py` prepares a narrower **account/readiness deployment only**. It uploads literal allowlisted backend runtime files, requests no GPU, permits at most one container with eight concurrent HTTP requests, scales to zero, and uses a 120-second function timeout. It requires an existing Modal secret named `quack-production` containing:
+`services/api/modal_app.py` uploads literal allowlisted backend runtime files, requests no GPU, permits at most one container with eight concurrent HTTP requests, scales to zero, and uses a 120-second function timeout. It places the container in Southeast Asia near the database; Modal charges a region-selection multiplier. It requires an existing Modal secret named `quack-production` containing:
 
 - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 - `QUACK_DATABASE_URL`, including a TLS `sslmode`.
@@ -106,6 +107,8 @@ Build from this repository root so its explicit Docker context policy applies. C
 
 Install the separate local SDK with `python -m pip install -r services/api/requirements-deploy.txt`. After verifying the account-specific financial protections and configuring that secret, the provider command is `modal deploy services/api/modal_app.py` from the repository root. Cloud builds can themselves consume allowance. Do not run it merely to inspect the configuration.
 
-This Modal entry point forces production Supabase authentication and PostgreSQL, clears the model key and locks all model budgets to zero even if secret values try to override them. It creates no volume or scheduled job. Its temporary ledger is acceptable only because it cannot make model calls. It cannot deliver the complete handwriting experience until durable, concurrency-safe spending accounting and authorized live inference are implemented and verified. Do not advertise it as a working AI demo.
+This Modal entry point forces production Supabase authentication and PostgreSQL accounting. Inference defaults to disabled: the model key is cleared and all budgets are zero. Enabling it requires the explicit secret `QUACK_INFERENCE_ENABLED=1`, `MODEL_API_KEY` and all four positive, finite `QUACK_BUDGET_*_USD` values. Verify actual provider credit and billing controls, and authorize live calls before enabling it. It creates no volume or scheduled job.
 
-The model pipeline remains in the ordinary API entry point. A single replica retains session state only while that container lives; account/learning data uses PostgreSQL, while notebook ink remains in browser storage. `/api/health` reports reachability and key configuration, not database readiness, remaining credit or a successful inference. Verify database access through authenticated account requests and test persistence after a host restart before declaring a deployment ready.
+PostgreSQL accounting commits a conservative reservation before contacting the model, covering its full retry allowance. Only a successful operation with complete usage receipts settles to its actual estimated cost. Failures, missing usage, cancellations, crashes and restarts retain the full reservation without automatic expiry. Actual usage above an estimate increases the recorded charge and can stop subsequent requests. An account's quota cannot be reset by rotating client session IDs. These quotas are estimates, not a provider billing hard cap; unknown input cost or changed prices can exceed an estimate. Both accounting tables have RLS enabled without public policies. Never clear their rows to reset a production allowance.
+
+The model pipeline remains in the ordinary API entry point. A single replica retains session state only while that container lives; account/learning data uses PostgreSQL, while notebook ink remains in browser storage. `/api/health` reports reachability and key configuration. `/api/ready` separately checks database reachability and Supabase configuration; its `modelStatus` explicitly does not probe inference. Neither endpoint proves a successful live recognition or an available provider balance. Verify authenticated requests and persistence after a host restart before declaring a deployment ready.

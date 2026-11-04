@@ -78,9 +78,14 @@ async def transcribe_wav(router: ModelRouter, raw: bytes, *, session_id: str = "
 
     cost = math.ceil(seconds) * VOICE_TRANSCRIBE_PER_SECOND
     try:
-        router.ledger.check(session_id, cost)
+        with router.ledger.reserve(session_id, cost):
+            return await _send_wav(router, cleaned, cost, session_id, run_id)
     except BudgetExceeded as exc:
         raise ModelError("budget_exceeded", str(exc)) from exc
+
+
+async def _send_wav(router: ModelRouter, cleaned: bytes, cost: float, session_id: str, run_id: str) -> str:
+    settings = router.settings
     record = UsageRecord(
         model=VOICE_TRANSCRIBE_MODEL, reasoning_effort="n/a", purpose="voice_transcribe",
         run_id=run_id, session_id=session_id,

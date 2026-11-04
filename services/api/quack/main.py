@@ -25,6 +25,7 @@ from quack.account_api import AccountServices, build_account_router, build_accou
 from quack.config import Settings, get_settings
 from quack.learn_api import build_learn_router
 from quack.llm.ledger import Ledger
+from quack.llm.postgres_ledger import PostgresLedger
 from quack.llm.report import summarise
 from quack.llm.router import ModelError, ModelRouter
 from quack.schemas import (
@@ -195,13 +196,14 @@ class Services:
 
 
 def build_services(settings: Settings, router: ModelRouter | None = None) -> Services:
-    ledger = router.ledger if router is not None else Ledger(
-        settings.ledger_path,
-        settings.budget_project_usd,
-        settings.budget_session_usd,
-        settings.budget_request_usd,
-        settings.budget_hourly_usd,
-    )
+    limits = (settings.budget_project_usd, settings.budget_session_usd,
+              settings.budget_request_usd, settings.budget_hourly_usd)
+    if router is not None:
+        ledger = router.ledger
+    elif settings.ledger_backend == "postgres":
+        ledger = PostgresLedger(settings.database_url, *limits)
+    else:
+        ledger = Ledger(settings.ledger_path, *limits)
     active_router = router or ModelRouter(settings, ledger)
     mistakes = MistakeManager()
     return Services(
@@ -332,6 +334,28 @@ def create_app(services: Services | None = None) -> FastAPI:
     @app.get("/api/health")
     async def health() -> Health:
         return Health(model_configured=state.router.configured, environment=state.settings.env)
+
+    @app.get("/api/ready", dependencies=[Depends(rate_limited)])
+    async def readiness() -> JSONResponse:
+        database_reachable = False
+        if state.accounts is not None:
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(state.accounts.store.database.one, "SELECT 1 AS reachable"), timeout=5,
+                )
+                database_reachable = bool(result and result["reachable"] == 1)
+            except Exception:
+                # Readiness never exposes database errors or connection credentials.
+                pass
+        auth_configured = state.accounts is not None and state.settings.auth_mode == "supabase"
+        return JSONResponse({
+            "reachable": True,
+            "databaseReachable": database_reachable,
+            "authConfigured": auth_configured,
+            "modelConfigured": state.router.configured,
+            "modelStatus": "configured_not_probed" if state.router.configured else "not_configured",
+            "inferenceEnabled": state.router.configured and state.settings.budget_project_usd > 0,
+        }, status_code=200 if database_reachable and auth_configured else 503)
 
     def prepare_help(session_id: str, response: AnalyzeResponse) -> None:
         for mistake in response.mistakes:

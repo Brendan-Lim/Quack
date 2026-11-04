@@ -17,6 +17,7 @@ def deployment(monkeypatch):  # type: ignore[no-untyped-def]
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-server-key")
     monkeypatch.setenv("QUACK_DATABASE_URL", "postgresql://example.invalid/quack?sslmode=require")
     monkeypatch.setenv("QUACK_CORS_ORIGINS", "https://quack.example")
+    monkeypatch.delenv("QUACK_INFERENCE_ENABLED", raising=False)
     # Return settings without creating a database connection or starting any service.
     monkeypatch.setattr(quack.main, "build_services", lambda settings: settings)
     monkeypatch.setattr(quack.main, "create_app", lambda settings: settings)
@@ -38,8 +39,25 @@ def test_readiness_deployment_cannot_enable_model_spending_or_development(deploy
     assert settings.env == "production"
     assert settings.auth_mode == "supabase"
     assert settings.model_api_key == ""
+    assert settings.ledger_backend == "postgres"
     assert settings.budget_project_usd == settings.budget_hourly_usd == 0
     assert settings.budget_session_usd == settings.budget_request_usd == 0
+
+
+def test_enabling_inference_requires_explicit_budgets_and_model_key(deployment, monkeypatch):  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("QUACK_INFERENCE_ENABLED", "1")
+    for scope in ("PROJECT", "HOURLY", "SESSION", "REQUEST"):
+        monkeypatch.setenv(f"QUACK_BUDGET_{scope}_USD", "0.25")
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    with pytest.raises(ValueError, match="MODEL_API_KEY"):
+        deployment.api.local()
+    monkeypatch.setenv("MODEL_API_KEY", "test-only-key")
+    settings = deployment.api.local()
+    assert settings.ledger_backend == "postgres"
+    assert settings.budget_project_usd == 0.25
+    monkeypatch.setenv("QUACK_BUDGET_PROJECT_USD", "0")
+    with pytest.raises(ValueError, match="QUACK_BUDGET_PROJECT_USD"):
+        deployment.api.local()
 
 
 @pytest.mark.parametrize("url", ["", "sqlite:///temporary.db", "postgresql://example.invalid/quack"])

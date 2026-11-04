@@ -56,7 +56,7 @@ class Ledger:
         self.request_limit = request_limit
         self.hourly_limit = hourly_limit
         self._lock = threading.Lock()
-        self.project_spend = 0.0
+        self._project_spend = 0.0
         self._session_spend: dict[str, float] = defaultdict(float)
         self._recent: deque[tuple[float, float]] = deque()
         # Worst-case cost of requests in flight, so concurrent calls cannot all pass a check.
@@ -66,6 +66,10 @@ class Ledger:
         if path is not None and path.exists():
             self._repair_tail(path)
             self._catch_up()
+
+    @property
+    def project_spend(self) -> float:
+        return self._project_spend
 
     @staticmethod
     def _repair_tail(path: Path) -> None:
@@ -88,7 +92,7 @@ class Ledger:
         size = self.path.stat().st_size
         if size < self._read_up_to:
             # The file was replaced, so nothing counted so far can be trusted to be in it.
-            self.project_spend, self._read_up_to = 0.0, 0
+            self._project_spend, self._read_up_to = 0.0, 0
             self._session_spend.clear()
             self._recent.clear()
         if size == self._read_up_to:
@@ -105,7 +109,7 @@ class Ledger:
 
     def _add(self, record: dict) -> None:
         cost = float(record.get("estimated_usd", 0.0))
-        self.project_spend += cost
+        self._project_spend += cost
         if record.get("session_id"):
             self._session_spend[record["session_id"]] += cost
         if cost:
@@ -126,10 +130,10 @@ class Ledger:
             self._catch_up()
         except json.JSONDecodeError as exc:
             # We can't tell what has been spent, so nothing more gets spent.
-            raise BudgetExceeded("ledger", self.project_spend, self.project_limit) from exc
+            raise BudgetExceeded("ledger", self._project_spend, self.project_limit) from exc
         if worst_case_usd > self.request_limit:
             raise BudgetExceeded("request", worst_case_usd, self.request_limit)
-        committed = self.project_spend + self._reserved_project
+        committed = self._project_spend + self._reserved_project
         if committed + worst_case_usd > self.project_limit:
             raise BudgetExceeded("project", committed, self.project_limit)
         if session_id:

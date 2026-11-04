@@ -320,6 +320,7 @@ services/api/quack/db/schema.sql
 services/api/quack/learn_api.py
 services/api/quack/llm/__init__.py
 services/api/quack/llm/ledger.py
+services/api/quack/llm/postgres_ledger.py
 services/api/quack/llm/pricing.py
 services/api/quack/llm/report.py
 services/api/quack/llm/router.py
@@ -383,6 +384,7 @@ services/api/tests/accounts_support.py
 services/api/tests/conftest.py
 services/api/tests/test_accounts.py
 services/api/tests/test_deployment.py
+services/api/tests/test_postgres_ledger.py
 services/api/tests/test_adaptive.py
 services/api/tests/test_ask.py
 services/api/tests/test_broader_maths.py

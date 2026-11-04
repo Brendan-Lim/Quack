@@ -12,7 +12,9 @@ cd services/api
 
 The default Pytest configuration excludes the `live` marker. HTTP stand-ins exercise mathematical checking, malformed input, confirmation rules, corrections, budgets, account boundaries, lessons and adaptation without real Meta calls.
 
-Installing `requirements-deploy.txt` also enables `tests/test_deployment.py`. These local SDK checks ensure the Modal readiness configuration cannot enable live spending, use development authentication, fall back to SQLite, or accept non-TLS database connections. They do not authenticate with Modal or start cloud builds.
+Installing `requirements-deploy.txt` also enables `tests/test_deployment.py`. These local SDK checks ensure inference stays disabled by default, enabling it requires explicit budgets and a key, and the deployment cannot use development authentication, fall back to SQLite, or accept non-TLS database connections. They do not authenticate with Modal or start cloud builds.
+
+`tests/test_postgres_ledger.py` exercises concurrent connections, durable debits after interrupted operations and restarts, account quotas, database failure and public-role RLS. It requires `QUACK_LEDGER_TEST_DATABASE_URL` to point to an isolated, disposable PostgreSQL database named `quack_ledger_test`; never point it at a hosted application database. These tests clear only their accounting tables in that disposable database.
 
 ## Frontend and browser
 

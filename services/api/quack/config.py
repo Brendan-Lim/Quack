@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     # This one stops anyone draining the credits quickly, whatever ids they use.
     budget_hourly_usd: float = Field(default=5.0, alias="QUACK_BUDGET_HOURLY_USD")
     ledger_path: Path = Field(default=API_ROOT / "var" / "usage.jsonl", alias="QUACK_LEDGER_PATH")
+    ledger_backend: Literal["file", "postgres"] = Field(default="file", alias="QUACK_LEDGER_BACKEND")
 
     # Who a request is from. "off" has no accounts at all, as Quack was before Phase 2. "local" is a
     # development stand-in, refused outside development. Unset, it follows from what's configured.

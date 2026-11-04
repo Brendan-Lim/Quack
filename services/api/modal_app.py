@@ -1,9 +1,11 @@
-"""CPU-only account/readiness deployment; live model inference is deliberately disabled.
+"""CPU-only deployment; live model inference is disabled unless explicitly configured.
 
 Run only after verifying account-specific credit and a zero out-of-pocket spend limit.
 See docs/SETUP.md. Importing this module does not deploy or provision resources.
 """
 
+import math
+import os
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -32,6 +34,8 @@ app = modal.App("quack-api")
     image=image,
     cpu=1,
     memory=2048,
+    region="ap-southeast",
+    routing_region="ap-south",
     min_containers=0,
     max_containers=1,
     buffer_containers=0,
@@ -51,18 +55,27 @@ def api():  # type: ignore[no-untyped-def]
     from quack.config import Settings
     from quack.main import build_services, create_app
 
+    inference = os.environ.get("QUACK_INFERENCE_ENABLED") == "1"
+    budgets = {}
+    for scope in ("PROJECT", "HOURLY", "SESSION", "REQUEST"):
+        name = f"QUACK_BUDGET_{scope}_USD"
+        value = float(os.environ[name]) if inference else 0.0
+        if inference and (not math.isfinite(value) or value <= 0):
+            raise ValueError(f"{name} must be an explicit positive, finite allowance")
+        budgets[name] = value
+    key = os.environ.get("MODEL_API_KEY", "") if inference else ""
+    if inference and not key:
+        raise ValueError("Enabling inference requires MODEL_API_KEY and verified credit")
+
     settings = Settings(
         _env_file=None,
         QUACK_ENV="production",
         QUACK_AUTH_MODE="supabase",
-        MODEL_API_KEY="",
-        QUACK_BUDGET_PROJECT_USD=0,
-        QUACK_BUDGET_HOURLY_USD=0,
-        QUACK_BUDGET_SESSION_USD=0,
-        QUACK_BUDGET_REQUEST_USD=0,
+        MODEL_API_KEY=key,
+        QUACK_LEDGER_BACKEND="postgres",
         QUACK_RATE_LIMIT_PER_MINUTE=20,
         QUACK_GLOBAL_RATE_LIMIT_PER_MINUTE=60,
-        QUACK_LEDGER_PATH="/tmp/quack-disabled-usage.jsonl",
+        **budgets,
     )
     database = urlsplit(settings.database_url)
     if database.scheme not in {"postgres", "postgresql"} or not database.hostname:

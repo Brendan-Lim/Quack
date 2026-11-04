@@ -654,6 +654,33 @@ class TestPublicSurface:
     def test_key_is_not_in_settings_repr(self, settings: Settings) -> None:
         assert "test-key" not in repr(settings)
 
+    def test_readiness_distinguishes_a_configured_key_from_database_and_auth(self, settings: Settings) -> None:
+        client = self.app(settings, env="production")
+        response = client.get("/api/ready")
+        assert response.status_code == 503
+        assert response.json() == {
+            "reachable": True, "databaseReachable": False, "authConfigured": False,
+            "modelConfigured": True, "modelStatus": "configured_not_probed", "inferenceEnabled": True,
+        }
+
+    def test_readiness_checks_database_without_exposing_errors(self, settings: Settings, tmp_path, monkeypatch) -> None:
+        client = self.app(
+            settings, env="production", auth_mode_setting="supabase", supabase_url="https://auth.example",
+            supabase_anon_key="public-test-key", sqlite_path=tmp_path / "readiness.db",
+        )
+        response = client.get("/api/ready")
+        assert response.status_code == 200
+        assert response.json()["databaseReachable"] is True
+        assert response.json()["modelStatus"] == "configured_not_probed"
+
+        def unavailable(*args):
+            raise RuntimeError("private-connection-error")
+
+        monkeypatch.setattr(client.app.state.services.accounts.store.database, "one", unavailable)
+        failed = client.get("/api/ready")
+        assert failed.status_code == 503
+        assert "private-connection-error" not in failed.text
+
     @respx.mock
     def test_cross_site_post_is_refused_even_without_a_preflight(self, client: TestClient) -> None:
         route = respx.post(CHAT).mock(return_value=reading(*RIGHT))

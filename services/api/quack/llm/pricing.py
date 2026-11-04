@@ -1,4 +1,4 @@
-"""Meta Model API list prices, from https://dev.meta.ai/docs/pricing-rate-limits (checked 2026-10-31)."""
+"""Meta Model API list prices, from https://dev.meta.ai/docs/pricing-rate-limits (checked 2026-11-05)."""
 
 from __future__ import annotations
 
