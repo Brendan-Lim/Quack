@@ -63,7 +63,7 @@ export function QuackApp({ options, accountActions, notebookHandle, covered = fa
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- reads browser-only state after mount */
     setShowPrivacy(!localStorage.getItem(PRIVACY_KEY));
-    setDebug(new URLSearchParams(window.location.search).has("debug"));
+    if (process.env.NODE_ENV !== "production") setDebug(new URLSearchParams(window.location.search).has("debug"));
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
@@ -93,7 +93,7 @@ export function QuackApp({ options, accountActions, notebookHandle, covered = fa
       } else if (event.key === "p") chooseTool("pen");
       else if (event.key === "e") chooseTool("eraser");
       else if (event.key === "l") chooseTool("lasso");
-      else if (event.key === "`") setDebug((current) => !current);
+      else if (process.env.NODE_ENV !== "production" && event.key === "`") setDebug((current) => !current);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -213,7 +213,7 @@ export function QuackApp({ options, accountActions, notebookHandle, covered = fa
         onDismissClarification={quack.dismissClarification}
       />
 
-      {debug && (
+      {process.env.NODE_ENV !== "production" && debug && (
         <DebugPanel
           duckState={duck.state}
           version={notebook.version}

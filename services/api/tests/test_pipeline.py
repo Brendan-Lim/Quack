@@ -644,7 +644,7 @@ class TestPublicSurface:
 
     def test_development_routes_are_off_unless_asked_for(self, settings: Settings) -> None:
         client = self.app(settings, env="production")
-        for path in ("/api/dev/usage", "/api/session/anything", "/docs", "/redoc", "/openapi.json"):
+        for path in ("/api/dev/usage", "/api/dev/trace/anything", "/api/session", "/api/session/anything", "/docs", "/redoc", "/openapi.json"):
             assert client.get(path).status_code == 404, path
         assert client.get("/api/health").status_code == 200
 

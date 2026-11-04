@@ -66,6 +66,7 @@ apps/web/package-lock.json
 apps/web/package.json
 apps/web/playwright.config.ts
 apps/web/playwright.live.config.ts
+apps/web/playwright.production.config.ts
 apps/web/public/file.svg
 apps/web/public/globe.svg
 apps/web/public/next.svg
@@ -73,6 +74,7 @@ apps/web/public/vercel.svg
 apps/web/public/window.svg
 apps/web/tests/e2e/accounts.spec.ts
 apps/web/tests/e2e/autocheck.spec.ts
+apps/web/tests/e2e/development-tools.spec.ts
 apps/web/tests/e2e/fake_meta.py
 apps/web/tests/e2e/helpers.ts
 apps/web/tests/e2e/ipad_qa.spec.ts
@@ -92,6 +94,7 @@ apps/web/tests/e2e/screens.spec.ts
 apps/web/tests/e2e/visual.lessons.spec.ts
 apps/web/tests/live/demos.spec.ts
 apps/web/tests/live/latency.spec.ts
+apps/web/tests/production/development-tools.spec.ts
 apps/web/tests/unit/accounts.test.ts
 apps/web/tests/unit/autocheck.test.ts
 apps/web/tests/unit/core.test.ts
@@ -103,6 +106,7 @@ apps/web/tests/unit/learn.test.ts
 apps/web/tests/unit/learn_views.test.ts
 apps/web/tests/unit/mistakes.test.ts
 apps/web/tests/unit/overlap.test.ts
+apps/web/tests/unit/production-tools.test.ts
 apps/web/tests/unit/tool_state.test.ts
 apps/web/tsconfig.json
 apps/web/vitest.config.mts

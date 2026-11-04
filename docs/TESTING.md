@@ -28,6 +28,15 @@ Vitest covers ink, line grouping, scheduling, duck state and other client logic.
 
 If the default ports are occupied, use `QUACK_E2E_PORT_SHIFT=1000 npm run test:e2e`. Keep local services isolated rather than stopping unrelated processes. Screenshot and performance specs are opt-in, so a normal browser run can report them as skipped.
 
+Check production-only restrictions against an actual production build:
+
+```bash
+npm run build
+npm run test:production
+```
+
+This starts `next start` and verifies that `/collect` returns HTTP 404, `?debug` and backtick expose no debugging or fixture export, and ordinary tool shortcuts, drawing and undo/redo still work. Authentication is stubbed in the browser for this test; it does not verify hosted accounts or inference. Set `QUACK_E2E_PORT_SHIFT` if port 3200 is occupied. The regular development suite also verifies that collection and debug export remain available locally.
+
 Synthetic fixtures under `evals/synthetic/` and `evals/dataset/synthetic/` support these tests. Evaluation source also supports methods tests, including calibration metrics. Generated results and collected handwriting belong outside the approved public file set.
 
 ## What the tests establish

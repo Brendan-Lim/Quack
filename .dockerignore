@@ -88,6 +88,7 @@
 !apps/web/package.json
 !apps/web/playwright.config.ts
 !apps/web/playwright.live.config.ts
+!apps/web/playwright.production.config.ts
 !apps/web/public/file.svg
 !apps/web/public/globe.svg
 !apps/web/public/next.svg

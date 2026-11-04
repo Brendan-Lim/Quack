@@ -17,6 +17,7 @@ export function DebugPanel({ duckState, version, strokes, trace, onExport }: Pro
   const [spend, setSpend] = useState<string>("n/a");
 
   useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
     let cancelled = false;
     void fetch("/api/dev/usage")
       .then((response) => (response.ok ? response.json() : null))
@@ -28,6 +29,8 @@ export function DebugPanel({ duckState, version, strokes, trace, onExport }: Pro
       cancelled = true;
     };
   }, [trace]);
+
+  if (process.env.NODE_ENV === "production") return null;
 
   const result = trace?.result;
   return (

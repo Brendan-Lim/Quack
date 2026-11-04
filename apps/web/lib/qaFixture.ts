@@ -59,6 +59,7 @@ export function buildFixture(
 }
 
 export function downloadFixture(fixture: QaFixture): void {
+  if (process.env.NODE_ENV === "production") return;
   const url = URL.createObjectURL(new Blob([JSON.stringify(fixture, null, 2)], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;
