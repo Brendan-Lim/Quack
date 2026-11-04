@@ -83,3 +83,29 @@ Use one API process/replica: session state, rate limits, caches and budget reser
 In production, development trace/usage routes, session inspection and API documentation should be unavailable. Request bodies are capped at 10 MB, audio at 8 MB; proxy timeouts must accommodate recognition. `/api/health` reports whether a key is configured, rather than proving live inference succeeds.
 
 Run the [public-file guard](PUBLICATION.md) before packaging. The root `.dockerignore` limits Docker build contexts to declared application inputs. Do not copy unrelated workspace files into a hosting upload. See [architecture](ARCHITECTURE.md) for storage and recognition boundaries.
+
+## Deployment configuration
+
+These configurations prepare hosting; they do not establish a live deployment or an account's free allowance. Verify the selected account's plan, remaining credits and enforceable spending controls before running cloud builds or deployment commands. Keep model inference disabled until its credit and durable accounting are verified.
+
+For Vercel, use a personal Hobby project with **Root Directory** `apps/web`. The included `vercel.json` selects Next.js and `npm ci`. Set `API_URL` to the verified HTTPS backend origin before building. A rewrite can wait up to Vercel's 120-second external-origin limit; changing Next's timeout cannot increase that provider limit. Keep authentication and account responses uncached. Configure Supabase's Site URL and permitted confirmation/reset redirects for the final frontend origin.
+
+The CPU-only Docker image uses Python 3.12, the locked dependency constraints, a non-root user and one Uvicorn worker:
+
+```bash
+docker build -f services/api/Dockerfile -t quack-api .
+```
+
+Build from this repository root so its explicit Docker context policy applies. Configure Supabase Auth, PostgreSQL with TLS and exact CORS origins through the hosting provider's secret store. Mount private durable storage at `/data` if using its ledger path. The image defaults every model budget to zero. An ephemeral `/data` is unsuitable for a nonzero budget, and a mounted disk alone does not make in-flight reservations crash-safe or distributed. The generic image does not validate a provider's billing controls.
+
+`services/api/modal_app.py` prepares a narrower **account/readiness deployment only**. It uploads literal allowlisted backend runtime files, requests no GPU, permits at most one container with eight concurrent HTTP requests, scales to zero, and uses a 120-second function timeout. It requires an existing Modal secret named `quack-production` containing:
+
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- `QUACK_DATABASE_URL`, including a TLS `sslmode`.
+- `QUACK_CORS_ORIGINS`, listing the exact HTTPS frontend origin.
+
+Install the separate local SDK with `python -m pip install -r services/api/requirements-deploy.txt`. After verifying the account-specific financial protections and configuring that secret, the provider command is `modal deploy services/api/modal_app.py` from the repository root. Cloud builds can themselves consume allowance. Do not run it merely to inspect the configuration.
+
+This Modal entry point forces production Supabase authentication and PostgreSQL, clears the model key and locks all model budgets to zero even if secret values try to override them. It creates no volume or scheduled job. Its temporary ledger is acceptable only because it cannot make model calls. It cannot deliver the complete handwriting experience until durable, concurrency-safe spending accounting and authorized live inference are implemented and verified. Do not advertise it as a working AI demo.
+
+The model pipeline remains in the ordinary API entry point. A single replica retains session state only while that container lives; account/learning data uses PostgreSQL, while notebook ink remains in browser storage. `/api/health` reports reachability and key configuration, not database readiness, remaining credit or a successful inference. Verify database access through authenticated account requests and test persistence after a host restart before declaring a deployment ready.

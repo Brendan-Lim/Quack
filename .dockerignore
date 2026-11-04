@@ -95,6 +95,7 @@
 !apps/web/public/vercel.svg
 !apps/web/public/window.svg
 !apps/web/tsconfig.json
+!apps/web/vercel.json
 !apps/web/vitest.config.mts
 !services/api/pyproject.toml
 !services/api/quack/__init__.py

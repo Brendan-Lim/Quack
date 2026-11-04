@@ -12,6 +12,8 @@ cd services/api
 
 The default Pytest configuration excludes the `live` marker. HTTP stand-ins exercise mathematical checking, malformed input, confirmation rules, corrections, budgets, account boundaries, lessons and adaptation without real Meta calls.
 
+Installing `requirements-deploy.txt` also enables `tests/test_deployment.py`. These local SDK checks ensure the Modal readiness configuration cannot enable live spending, use development authentication, fall back to SQLite, or accept non-TLS database connections. They do not authenticate with Modal or start cloud builds.
+
 ## Frontend and browser
 
 ```bash

@@ -110,6 +110,7 @@ apps/web/tests/unit/production-tools.test.ts
 apps/web/tests/unit/tool_state.test.ts
 apps/web/tsconfig.json
 apps/web/vitest.config.mts
+apps/web/vercel.json
 docs/ARCHITECTURE.md
 docs/CREDITS.md
 docs/PUBLICATION.md
@@ -298,6 +299,9 @@ scripts/check-publication.sh
 scripts/check_publication.py
 scripts/public-files.txt
 services/api/pyproject.toml
+services/api/Dockerfile
+services/api/modal_app.py
+services/api/requirements-deploy.txt
 services/api/quack/__init__.py
 services/api/quack/account_api.py
 services/api/quack/calibration/prompts.v1.json
@@ -378,6 +382,7 @@ services/api/tests/__init__.py
 services/api/tests/accounts_support.py
 services/api/tests/conftest.py
 services/api/tests/test_accounts.py
+services/api/tests/test_deployment.py
 services/api/tests/test_adaptive.py
 services/api/tests/test_ask.py
 services/api/tests/test_broader_maths.py
