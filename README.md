@@ -1,7 +1,7 @@
-<a href="docs/media/hero.svg#gh-light-mode-only">
+<a href="docs/media/hero.svg?v=2#gh-light-mode-only">
   <picture>
     <source media="(max-width: 600px)" srcset="docs/media/hero-mobile.svg" />
-    <img src="docs/media/hero.svg" width="100%" alt="Quack — Your little maths companion. Catch maths mistakes while you work through homework. Original duck and actual feedback and hint UI; scripted demonstration." />
+    <img src="docs/media/hero.svg?v=2" width="100%" alt="Quack — Your little maths companion. Catch maths mistakes while you work through homework. Original duck and actual feedback and hint UI; scripted demonstration." />
   </picture>
 </a>
 <a href="docs/media/hero-dark.svg#gh-dark-mode-only">
@@ -108,14 +108,14 @@ The original duck has checking, hint and celebration states, with optional brows
 The model reads handwriting. Code checks the mathematics.
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 300, "rankSpacing": 24, "nodeSpacing": 24}}}%%
 flowchart TD
-    A[Handwritten strokes → changed-line crops]
-    A --> B[Meta Muse Spark 1.3<br/>Independent recognition readings]
-    B --> C{Readings agree?}
-    C -->|Unclear| D[Abstain or ask for a rewrite]
-    C -->|Agree| E[Restricted mathematical parser<br/>Deterministic SymPy verification]
-    E --> F[Track mistake → offer requested hints]
-    F --> G[Verify correction → targeted practice → progress]
+    A["Ink → changed-line crops"] --> B["Meta Muse Spark 1.3<br/>Independent readings"]
+    B --> C{"Readings agree?"}
+    C -->|Unclear| D["Abstain or ask for a rewrite"]
+    C -->|Agree| E["Restricted parser<br/>SymPy verification"]
+    E --> F["Track mistake<br/>Hint on request"]
+    F --> G["Verified correction<br/>Targeted practice + progress"]
 ```
 
 **Reading and checking are different jobs.** Meta's multimodal model interprets the image. Python's restricted parser and SymPy check supported mathematics. The verifier cannot know what was physically written without recognition evidence; two agreeing readings can still share a mistake.
