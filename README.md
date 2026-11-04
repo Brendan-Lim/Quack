@@ -1,59 +1,72 @@
-<p align="center"><img src="docs/media/hero.svg" width="100%" alt="Quack — Your little maths companion. The original yellow duck on warm cream notebook paper." /></p>
+<a href="docs/media/hero.svg#gh-light-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="docs/media/hero-mobile.svg" />
+    <img src="docs/media/hero.svg" width="100%" alt="Quack — Your little maths companion. Catch maths mistakes while you work through homework. Original duck and actual feedback and hint UI; scripted demonstration." />
+  </picture>
+</a>
+<a href="docs/media/hero-dark.svg#gh-dark-mode-only">
+  <picture>
+    <source media="(max-width: 600px)" srcset="docs/media/hero-mobile-dark.svg" />
+    <img src="docs/media/hero-dark.svg" width="100%" alt="Quack — Your little maths companion. Catch maths mistakes while you work through homework. Original duck and actual feedback and hint UI; scripted demonstration." />
+  </picture>
+</a>
 
-<h1 align="center">Quack</h1>
-<h3 align="center">Your little maths companion.</h3>
-<p align="center">A handwriting-first AI maths tutor that helps students catch mistakes while doing homework.</p>
-<p align="center">Built for the Meta Global AI Developer Hackathon 2026<br/>Meta Muse Spark · SymPy · Next.js · FastAPI</p>
-<p align="center"><a href="https://quack-amber-seven.vercel.app">Try Quack</a> · <a href="#how-quack-works">How it works</a> · <a href="docs/hackathon/JUDGE_GUIDE.md">Judge guide</a> · <a href="#run-quack-locally">Run locally</a></p>
+<p align="center"><strong>Catch maths mistakes while you work through homework.</strong><br/>A handwriting-first AI maths tutor for primary and secondary school students.</p>
+<p align="center"><a href="https://quack-amber-seven.vercel.app/">Try Quack</a> · <a href="#see-a-mistake-become-a-learning-moment">See the learning loop</a> · <a href="#how-quack-works">How it works</a> · <a href="#run-quack-locally">Run locally</a></p>
 
-Meet Quack, a friendly little duck that helps you learn maths as you write. Work through a problem in your own handwriting. When Quack is confident it has found a supported mistake, it points to that line, gently. Ask for a hint, try a correction, and keep going. It is made for primary and secondary school students doing homework and revision on their own.
+Write your own mathematics. When Quack identifies a supported mistake, it points to the line. Ask for a hint, make your own correction, and keep going. Built for the Meta Global AI Developer Hackathon 2026.
 
-**[Open the public demo](https://quack-amber-seven.vercel.app).** Create your own account, complete six handwriting samples and choose **Learn** or **My Notebook**. The demo uses Supabase accounts and PostgreSQL learning records, with live Meta recognition. Its shared model allowance is limited, and the backend may take a moment to wake after inactivity.
+**In the public demo:** create an account, complete six handwriting samples, then choose **My Notebook** or **Learn**. Supabase accounts, PostgreSQL learning records and live Meta recognition are connected. The shared model allowance is limited; the backend may take a moment to wake after inactivity.
 
 ## Why I built Quack
 
-I've done private tuition for primary and secondary school students. When I sat beside a student, they usually understood the maths, because I could correct a mistake as they made it. Homework is different. Nobody is there, so a slip in an early step gets carried through every line after it. The student finds out at the final answer, or when we go through the homework at the next lesson.
+While giving private tuition to primary and secondary school students, I noticed a gap between lessons and homework. Students often understood the maths when I sat beside them. Working alone, a mistake midway through a solution could carry through every remaining line, only coming to light at the final answer or our next lesson.
 
-I wanted independent homework to have a little of what makes tuition work: someone noticing where it went wrong while there is still a chance to fix it.
-
-Students this age do maths by writing, so Quack works from handwriting instead of asking them to type equations into a chatbot. It checks supported working, offers a hint rather than the answer, and leaves the correction to the student. It is meant for the hours when a teacher or tutor is not there, and it does not replace one.
+I built Quack to bring some of that timely feedback into independent homework. Students write, ask for hints and correct their own work. Quack supports teachers and tutors in the hours between lessons.
 
 ## Two ways to learn
 
-**My Notebook** is for your own questions. Write freely, with pen, eraser, undo and redo. Quack checks supported working, highlights a relevant line and offers help when you ask. Notes stay on your device.
+### My Notebook
 
-**Learn with Quack** is guided. Choose a path, read a short lesson, follow a worked example and solve questions on the same handwriting canvas. Verified work feeds targeted practice and mastery progression, so you unlock levels as you go.
+Bring your own question and write freely. Pen, eraser, undo and redo keep the page yours. Quack checks supported working and offers help when you ask. Notes stay on your device.
 
-<p align="center">
-  <img src="docs/media/notebook.webp" width="400" alt="My Notebook with synthetic handwritten working and gentle mistake feedback." />
-  <img src="docs/media/active-learning.webp" width="400" alt="A guided question above Quack's handwriting canvas." />
-</p>
+<a href="docs/media/notebook.webp"><img src="docs/media/notebook-detail.webp" width="100%" alt="My Notebook, cropped from the actual UI: handwritten 3 × 4 = 10 is highlighted. Open the image for the full notebook and duck." /></a>
 
-Learn reuses the notebook's ink and verification pipeline. You work through the mathematics yourself, with room for intermediate steps.
+### Learn with Quack
 
-## Write → notice → hint → correct → practise → progress
+Choose a path, read a short lesson and work through questions on the same handwriting canvas. Verified corrections lead to targeted practice and progression.
 
-This is the loop Quack is built around. Here it is in the guided question **Simplify `3x + 2x`**:
+<a href="docs/media/active-learning.webp"><img src="docs/media/learning-detail.webp" width="100%" alt="Learn with Quack, cropped from the actual guided canvas: a question on repeated variables, pen controls and Check my answer." /></a>
 
-1. **Write.** The student writes `5`, dropping the variable.
-2. **Notice.** With agreeing readings and deterministic verification, Quack flags the line: "It looks like the letter went missing."
-3. **Hint.** Ask for help and the duck asks "What happened to the variable?" without supplying the answer.
-4. **Correct.** The student changes it to `5x` and Quack verifies the change.
-5. **Practise.** A follow-up on the same skill comes next, here `6n − 2n`.
-6. **Progress.** Independent answers and assisted corrections earn different credit towards the next level.
+*All product captures use the actual release UI, synthetic ink, isolated test accounts and scripted model readings. The API, verifier and learning flow are real. These images do not demonstrate live recognition, physical Apple Pencil accuracy or educational outcomes. Detail images are crops; select them to inspect the full captures. [Media provenance and full gallery](docs/media/README.md).*
 
-<p align="center">
-  <img src="docs/media/mistake-feedback.webp" width="400" alt="Quack flags that the letter went missing after the student writes 5 for 3x + 2x." />
-  <img src="docs/media/mistake-hint.webp" width="400" alt="A hint after the variable was dropped from the answer to 3x + 2x." />
-  <img src="docs/media/correction.webp" width="400" alt="Quack accepts the correction to 5x in the current guided lesson." />
-  <img src="docs/media/adaptive-follow-up.webp" width="400" alt="A related question, Simplify 6n - 2n, after a verified correction." />
-</p>
+## See a mistake become a learning moment
 
-*Screenshots show the actual release UI with synthetic ink, isolated test accounts and scripted model readings. The API, verifier and learning flow are real; these captures do not demonstrate live Meta recognition or physical Apple Pencil accuracy. [Media provenance](docs/media/README.md).*
+**Write → Notice → Hint → Correct → Practise → Progress**
 
-Quack does not catch every mistake. It covers a supported set, and when readings disagree or the handwriting is unclear it can ask you to rewrite instead of guessing.
+### 1. A small slip, noticed while it matters
 
-The current adaptation policy is deterministic. It picks the next question from verified mathematical events and named misconceptions, and there is no separately trained recommendation model. Unclear handwriting is never treated as evidence of a misconception.
+The question is **Simplify `3x + 2x`**. The student writes `5`, dropping the variable. With agreeing recognition readings and deterministic verification, Quack flags the missing letter.
+
+<a href="docs/media/mistake-feedback.webp"><img src="docs/media/feedback-detail.webp" width="100%" alt="Actual guided question, Simplify 3x + 2x, with handwritten 5 and feedback: It looks like the letter went missing." /></a>
+
+### 2. A hint leaves the next step to the student
+
+Tap the duck for help: “Look at the terms on both sides. What happened to the variable?” The first hint does not supply the answer. Stronger help is available when needed.
+
+<p align="center"><a href="docs/media/mistake-hint.webp"><img src="docs/media/hint-detail.webp" width="390" alt="A crop of the actual hint panel and original duck, asking what happened to the variable, with Another hint and Explain controls." /></a></p>
+
+### 3. The correction shapes what comes next
+
+The student changes the answer to **`5x`**. Quack verifies the correction, then selects a related question: **`6n − 2n`**. Independent answers and assisted corrections earn different credit towards the next level.
+
+<a href="docs/media/correction.webp"><img src="docs/media/correction-detail.webp" width="100%" alt="Actual accepted correction: handwritten 5x, with green feedback saying Quack checked every line." /></a>
+
+<a href="docs/media/adaptive-follow-up.webp"><img src="docs/media/practice-detail.webp" width="100%" alt="The actual next question, Simplify 6n − 2n, and a message that Quack is practising the letter-went-missing misconception." /></a>
+
+Quack checks a supported set of mathematics. When readings disagree or handwriting is unclear, it can abstain or ask you to rewrite. Two agreeing readings can still share a recognition error.
+
+The adaptation policy is deterministic: verified mathematical events and named misconceptions select the next question. There is no separately trained recommendation model, and unclear handwriting is never evidence of a misconception.
 
 <details>
 <summary><strong>What else is built?</strong></summary>
@@ -68,17 +81,10 @@ The current adaptation policy is deterministic. It picks the next question from 
 
 </details>
 
-## A companion with a little personality
+<details>
+<summary><strong>Six learning paths, the guided canvas and progression</strong></summary>
 
-<p align="center"><img src="docs/media/quack.svg" width="130" alt="Quack, the project's original yellow duck mascot." /></p>
-
-Quack checks quietly, quacks on a newly verified mistake, offers encouragement when you ask for help and celebrates accepted answers and mastered levels. The original SVG duck has animated checking, hint and celebration states, with optional browser-generated sound cues.
-
-<p align="center"><img src="docs/media/level-mastered.webp" width="400" alt="Quack celebrates a mastered level." /></p>
-
-## Six playable learning paths
-
-<img src="docs/media/learning-paths.webp" width="100%" alt="The current Quack catalog, showing all six open mathematics paths." />
+<img src="docs/media/learning-paths.webp" width="100%" alt="The six playable paths in Quack's actual catalog." />
 
 | Path | What you can practise | Levels, including its challenge |
 |---|---|---:|
@@ -91,26 +97,25 @@ Quack checks quietly, quacks on a newly verified mistake, offers encouragement w
 
 Algebra is the most developed journey. The other five are **playable starter journeys**, adding 12 regular levels, five mastery challenges and 37 question templates. They are focused learning paths, not full subject or national curriculum coverage. The [versioned catalog](services/api/quack/curriculum/catalog.v1.json) is the source of truth.
 
-<img src="docs/media/algebra-roadmap.webp" width="100%" alt="The connected Algebra Foundations roadmap with levels and mastery progression." />
+The original duck has checking, hint and celebration states, with optional browser-generated sound. It checks quietly and quacks once on a newly verified mistake.
+
+[Guided canvas](docs/media/active-learning.webp) · [Algebra roadmap](docs/media/algebra-roadmap.webp) · [Mastery celebration](docs/media/level-mastered.webp) · [My Mistakes](docs/media/my-mistakes.webp)
+
+</details>
 
 ## How Quack works
 
+The model reads handwriting. Code checks the mathematics.
+
 ```mermaid
-flowchart LR
-    A[Student writes by hand] --> B[Ink grouped into lines<br/>changed-line crops]
-    subgraph model [The model reads]
-        C[Meta Muse Spark 1.3<br/>independent readings]
-    end
-    B --> C
-    C --> D[Reconcile readings]
-    subgraph code [Code checks]
-        E[Restricted parser] --> F[SymPy verification]
-    end
-    D --> E
-    D --> K[Abstain when unclear]
-    F --> G[Verified mistake and hint]
-    G --> H[Corrections and learning events]
-    H --> I[Targeted practice and mastery]
+flowchart TD
+    A[Handwritten strokes → changed-line crops]
+    A --> B[Meta Muse Spark 1.3<br/>Independent recognition readings]
+    B --> C{Readings agree?}
+    C -->|Unclear| D[Abstain or ask for a rewrite]
+    C -->|Agree| E[Restricted mathematical parser<br/>Deterministic SymPy verification]
+    E --> F[Track mistake → offer requested hints]
+    F --> G[Verify correction → targeted practice → progress]
 ```
 
 **Reading and checking are different jobs.** Meta's multimodal model interprets the image. Python's restricted parser and SymPy check supported mathematics. The verifier cannot know what was physically written without recognition evidence; two agreeing readings can still share a mistake.
@@ -130,6 +135,9 @@ The engineering sits between these stages: grouping freehand strokes into lines,
 | Verification | Pytest, Vitest, Playwright, Ruff, ESLint and TypeScript |
 
 ## Run Quack locally
+
+<details>
+<summary><strong>Setup, test commands and production requirements</strong></summary>
 
 Use Python **3.11+** (3.12 recommended), Node.js **20.9+**, npm, and a Meta Model API key from [Meta for Developers](https://dev.meta.ai). The Python verifier requires a platform supporting `multiprocessing`'s `forkserver`, such as macOS or Linux.
 
@@ -176,6 +184,8 @@ Browser suites start isolated APIs, databases and a fake Meta server. If their p
 
 **Production build:** set `API_URL` when building, for example `API_URL=https://your-api-host npm run build`, then `npm start`. Next proxies `/api/*`; this requires a Next server with rewrite support. Static-only hosting does not support the current configuration. [Server requirements](docs/SETUP.md#server-requirements).
 
+</details>
+
 ## Current limits
 
 Automated coverage exercises the parser, symbolic verifier, correction lifecycle, question selection, account boundaries and browser journeys. Run the suites with the commands above; [testing documentation](docs/TESTING.md) explains which layers use a fake model and what the results can establish.
@@ -198,8 +208,6 @@ When checking is enabled or requested, recent-line image crops go to Meta's API.
 | [Technical overview](docs/hackathon/TECHNICAL_OVERVIEW.md) | [Setup and account configuration](docs/SETUP.md) |
 | [Screenshot gallery](docs/media/README.md) | [Tests and reproducibility](docs/TESTING.md) |
 | [Documentation index](docs/README.md) | [Public-file policy](docs/PUBLICATION.md) |
-
-The source can also be run locally using the instructions above.
 
 ## Credits and licensing
 

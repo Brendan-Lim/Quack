@@ -418,3 +418,12 @@ services/api/tests/test_round3_pipeline.py
 services/api/tests/test_routing_regression.py
 services/api/tests/test_starter_paths.py
 services/api/tests/test_task_context.py
+docs/media/hero-dark.svg
+docs/media/hero-mobile.svg
+docs/media/hero-mobile-dark.svg
+docs/media/notebook-detail.webp
+docs/media/feedback-detail.webp
+docs/media/hint-detail.webp
+docs/media/correction-detail.webp
+docs/media/practice-detail.webp
+docs/media/learning-detail.webp

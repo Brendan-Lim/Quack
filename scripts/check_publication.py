@@ -26,6 +26,16 @@ PUBLIC_DOCS = {
     "docs/media/README.md",
 }
 MEDIA_NAMES = {
+    "learning-detail.webp",
+    "hero-dark.svg",
+    "hero-mobile.svg",
+    "hero-mobile-dark.svg",
+    "notebook-detail.webp",
+    "feedback-detail.webp",
+    "hint-detail.webp",
+    "correction-detail.webp",
+    "practice-detail.webp",
+
     "hero.svg",
     "quack.svg",
     "learning-paths.webp",
