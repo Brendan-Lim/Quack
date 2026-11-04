@@ -11,21 +11,23 @@ from urllib.parse import parse_qs, urlsplit
 
 import modal
 
-ROOT = Path(__file__).resolve().parents[2]
-API = ROOT / "services" / "api"
-
-image = (
-    modal.Image.debian_slim(python_version="3.12")
-    .add_local_file(API / "requirements.lock", "/tmp/quack-requirements.lock", copy=True)
-    .pip_install_from_requirements(str(API / "requirements.txt"), extra_options="-c /tmp/quack-requirements.lock")
-)
-# Upload only literal approved runtime files. Never upload the parent workspace, .env,
-# local databases, bytecode, tests or private records, even if they are ignored by Git.
-for approved in (ROOT / "scripts" / "public-files.txt").read_text().splitlines():
-    if approved.startswith("services/api/quack/"):
-        relative = Path(approved).relative_to("services/api")
-        image = image.add_local_file(ROOT / approved, f"/srv/{relative.as_posix()}")
+image = modal.Image.debian_slim(python_version="3.12")
+if modal.is_local():
+    ROOT = Path(__file__).resolve().parents[2]
+    API = ROOT / "services" / "api"
+    image = (
+        image.add_local_file(API / "requirements.lock", "/tmp/quack-requirements.lock", copy=True)
+        .pip_install_from_requirements(str(API / "requirements.txt"), extra_options="-c /tmp/quack-requirements.lock")
+    )
 image = image.env({"PYTHONPATH": "/srv", "PYTHONDONTWRITEBYTECODE": "1", "PYTHONUNBUFFERED": "1"})
+if modal.is_local():
+    # Runtime mounts must follow every image build step. Never resolve local
+    # checkout paths when Modal imports this module inside a remote container.
+    # Upload literal approved files only; no workspace directories or ignored data.
+    for approved in (ROOT / "scripts" / "public-files.txt").read_text().splitlines():
+        if approved.startswith("services/api/quack/"):
+            relative = Path(approved).relative_to("services/api")
+            image = image.add_local_file(ROOT / approved, f"/srv/{relative.as_posix()}")
 
 app = modal.App("quack-api")
 
