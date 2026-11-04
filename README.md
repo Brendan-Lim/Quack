@@ -4,9 +4,11 @@
 <h3 align="center">Your little maths companion.</h3>
 <p align="center"><strong>Write your maths. Learn from your mistakes. Grow with Quack.</strong></p>
 <p align="center">Built for the Meta Global AI Developer Hackathon 2026<br/>Meta Muse Spark · SymPy · Next.js · FastAPI</p>
-<p align="center"><a href="#a-little-help-while-you-work">Explore Quack</a> · <a href="#run-quack-locally">Run locally</a> · <a href="docs/hackathon/JUDGE_GUIDE.md">Judge guide</a> · <a href="docs/hackathon/TECHNICAL_OVERVIEW.md">Under the hood</a></p>
+<p align="center"><a href="https://quack-amber-seven.vercel.app">Try Quack</a> · <a href="#run-quack-locally">Run locally</a> · <a href="docs/hackathon/JUDGE_GUIDE.md">Judge guide</a> · <a href="docs/hackathon/TECHNICAL_OVERVIEW.md">Under the hood</a></p>
 
 Meet Quack, a friendly little duck that helps you learn maths as you write. Work through a problem in your own handwriting. When Quack confidently identifies a supported mistake, it gently draws your attention to it. Ask for a hint, try a correction, and keep going.
+
+**[Open the public demo](https://quack-amber-seven.vercel.app).** Create your own account, complete six handwriting samples and choose **Learn** or **My Notebook**. The demo uses Supabase accounts and PostgreSQL learning records, with live Meta recognition. Its shared model allowance is limited, and the backend may take a moment to wake after inactivity.
 
 ## A little help while you work
 
@@ -154,7 +156,7 @@ Automated coverage exercises the parser, symbolic verifier, correction lifecycle
 - Recognition accuracy has not been established on a representative handwriting dataset. A brief alert on an unfinished line remains possible. Quack does not guarantee zero false positives.
 - Geometry has word problems, without diagrams. Trigonometry excludes surds and undefined values; some wrong exact-value work remains uncertain rather than producing an alert.
 - Calibration's recognition benefit and educational effectiveness have not been established through controlled studies.
-- Supabase integration has been tested against stand-ins, not a configured production project. Session state is in one API process. Notes stay on the device; accounts sync learning records, not notebooks.
+- Hosted Supabase registration, sign-in, session refresh and account isolation have been checked. Live Meta recognition was smoke-tested with synthetic pointer-drawn ink for an Algebra mistake and correction; this does not establish general recognition accuracy. Live checking state is in one API process. Notes stay on the device; accounts sync learning records, not notebooks.
 
 ## Your writing and your data
 
