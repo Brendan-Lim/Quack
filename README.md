@@ -2,44 +2,56 @@
 
 <h1 align="center">Quack</h1>
 <h3 align="center">Your little maths companion.</h3>
-<p align="center"><strong>Write your maths. Learn from your mistakes. Grow with Quack.</strong></p>
+<p align="center">A handwriting-first AI maths tutor that helps students catch mistakes while doing homework.</p>
 <p align="center">Built for the Meta Global AI Developer Hackathon 2026<br/>Meta Muse Spark · SymPy · Next.js · FastAPI</p>
-<p align="center"><a href="https://quack-amber-seven.vercel.app">Try Quack</a> · <a href="#run-quack-locally">Run locally</a> · <a href="docs/hackathon/JUDGE_GUIDE.md">Judge guide</a> · <a href="docs/hackathon/TECHNICAL_OVERVIEW.md">Under the hood</a></p>
+<p align="center"><a href="https://quack-amber-seven.vercel.app">Try Quack</a> · <a href="#how-quack-works">How it works</a> · <a href="docs/hackathon/JUDGE_GUIDE.md">Judge guide</a> · <a href="#run-quack-locally">Run locally</a></p>
 
-Meet Quack, a friendly little duck that helps you learn maths as you write. Work through a problem in your own handwriting. When Quack is confident it has found a supported mistake, it points to that line, gently. Ask for a hint, try a correction, and keep going.
+Meet Quack, a friendly little duck that helps you learn maths as you write. Work through a problem in your own handwriting. When Quack is confident it has found a supported mistake, it points to that line, gently. Ask for a hint, try a correction, and keep going. It is made for primary and secondary school students doing homework and revision on their own.
 
 **[Open the public demo](https://quack-amber-seven.vercel.app).** Create your own account, complete six handwriting samples and choose **Learn** or **My Notebook**. The demo uses Supabase accounts and PostgreSQL learning records, with live Meta recognition. Its shared model allowance is limited, and the backend may take a moment to wake after inactivity.
 
-## A little help while you work
+## Why I built Quack
 
-Knowing an answer is wrong isn't always enough. The difficult part is finding the step where your reasoning changed direction. Quack checks your handwritten working as you go and points at that step, but leaves the next move to you.
+I've done private tuition for primary and secondary school students. When I sat beside a student, they usually understood the maths, because I could correct a mistake as they made it. Homework is different. Nobody is there, so a slip in an early step gets carried through every line after it. The student finds out at the final answer, or when we go through the homework at the next lesson.
 
-<img src="docs/media/learning-paths.webp" width="100%" alt="The current Quack catalog, showing all six open mathematics paths." />
+I wanted independent homework to have a little of what makes tuition work: someone noticing where it went wrong while there is still a chance to fix it.
 
-*Screenshots show the actual release UI with synthetic ink, isolated test accounts and scripted model readings. The API, verifier and learning flow are real; these captures do not demonstrate live Meta recognition or physical Apple Pencil accuracy. [Media provenance](docs/media/README.md).*
+Students this age do maths by writing, so Quack works from handwriting instead of asking them to type equations into a chatbot. It checks supported working, offers a hint rather than the answer, and leaves the correction to the student. It is meant for the hours when a teacher or tutor is not there, and it does not replace one.
 
 ## Two ways to learn
 
-| My Notebook | Learn with Quack |
-|---|---|
-| Bring your own question and write freely. Pen, eraser, undo and redo keep the page yours. Quack checks supported working, highlights a relevant line and offers help when you ask. | Choose a path, read a short lesson, follow a worked example and solve questions on the same handwriting canvas. Verified work feeds targeted practice and mastery progression. |
-| <img src="docs/media/notebook.webp" width="560" alt="My Notebook with synthetic handwritten working and gentle mistake feedback." /> | <img src="docs/media/active-learning.webp" width="560" alt="A guided question above Quack's handwriting canvas." /> |
+**My Notebook** is for your own questions. Write freely, with pen, eraser, undo and redo. Quack checks supported working, highlights a relevant line and offers help when you ask. Notes stay on your device.
+
+**Learn with Quack** is guided. Choose a path, read a short lesson, follow a worked example and solve questions on the same handwriting canvas. Verified work feeds targeted practice and mastery progression, so you unlock levels as you go.
+
+<p align="center">
+  <img src="docs/media/notebook.webp" width="400" alt="My Notebook with synthetic handwritten working and gentle mistake feedback." />
+  <img src="docs/media/active-learning.webp" width="400" alt="A guided question above Quack's handwriting canvas." />
+</p>
 
 Learn reuses the notebook's ink and verification pipeline. You work through the mathematics yourself, with room for intermediate steps.
 
-## A companion with a little personality
-
-<p align="center"><img src="docs/media/quack.svg" width="130" alt="Quack, the project's original yellow duck mascot." /></p>
-
-Quack checks quietly, quacks on a newly verified mistake, offers encouragement when you ask for help and celebrates accepted answers and mastered levels. The original SVG duck has animated checking, hint and celebration states, with optional browser-generated sound cues.
-
-| A useful nudge | A correction worth celebrating |
-|---|---|
-| <img src="docs/media/mistake-hint.webp" width="560" alt="A hint after the variable was dropped from the answer to 3x + 2x." /> | <img src="docs/media/correction.webp" width="560" alt="Quack accepts the correction to 5x in the current guided lesson." /> |
-
 ## Write → notice → hint → correct → practise → progress
 
-In the guided question **Simplify `3x + 2x`**, writing `5` drops the variable. With agreeing readings and deterministic verification, Quack can identify that mistake and give a hint without immediately supplying the answer. Correct it to `5x` and the verified correction feeds a follow-up question on the same skill.
+This is the loop Quack is built around. Here it is in the guided question **Simplify `3x + 2x`**:
+
+1. **Write.** The student writes `5`, dropping the variable.
+2. **Notice.** With agreeing readings and deterministic verification, Quack flags the line: "It looks like the letter went missing."
+3. **Hint.** Ask for help and the duck asks "What happened to the variable?" without supplying the answer.
+4. **Correct.** The student changes it to `5x` and Quack verifies the change.
+5. **Practise.** A follow-up on the same skill comes next, here `6n − 2n`.
+6. **Progress.** Independent answers and assisted corrections earn different credit towards the next level.
+
+<p align="center">
+  <img src="docs/media/mistake-feedback.webp" width="400" alt="Quack flags that the letter went missing after the student writes 5 for 3x + 2x." />
+  <img src="docs/media/mistake-hint.webp" width="400" alt="A hint after the variable was dropped from the answer to 3x + 2x." />
+  <img src="docs/media/correction.webp" width="400" alt="Quack accepts the correction to 5x in the current guided lesson." />
+  <img src="docs/media/adaptive-follow-up.webp" width="400" alt="A related question, Simplify 6n - 2n, after a verified correction." />
+</p>
+
+*Screenshots show the actual release UI with synthetic ink, isolated test accounts and scripted model readings. The API, verifier and learning flow are real; these captures do not demonstrate live Meta recognition or physical Apple Pencil accuracy. [Media provenance](docs/media/README.md).*
+
+Quack does not catch every mistake. It covers a supported set, and when readings disagree or the handwriting is unclear it can ask you to rewrite instead of guessing.
 
 The current adaptation policy is deterministic. It picks the next question from verified mathematical events and named misconceptions, and there is no separately trained recommendation model. Unclear handwriting is never treated as evidence of a misconception.
 
@@ -56,7 +68,17 @@ The current adaptation policy is deterministic. It picks the next question from 
 
 </details>
 
+## A companion with a little personality
+
+<p align="center"><img src="docs/media/quack.svg" width="130" alt="Quack, the project's original yellow duck mascot." /></p>
+
+Quack checks quietly, quacks on a newly verified mistake, offers encouragement when you ask for help and celebrates accepted answers and mastered levels. The original SVG duck has animated checking, hint and celebration states, with optional browser-generated sound cues.
+
+<p align="center"><img src="docs/media/level-mastered.webp" width="400" alt="Quack celebrates a mastered level." /></p>
+
 ## Six playable learning paths
+
+<img src="docs/media/learning-paths.webp" width="100%" alt="The current Quack catalog, showing all six open mathematics paths." />
 
 | Path | What you can practise | Levels, including its challenge |
 |---|---|---:|
@@ -75,21 +97,25 @@ Algebra is the most developed journey. The other five are **playable starter jou
 
 ```mermaid
 flowchart LR
-    A[Student writes] --> B[Ink capture and line grouping]
-    B --> C[Changed-line image crops]
-    C --> D[Meta Muse Spark readings]
-    D --> E[Reconcile independent readings]
-    E --> F[Safe mathematical parser]
-    F --> G[SymPy verification]
-    G --> H[Mistake identity and helpful hints]
-    H --> I[Verified corrections and learning events]
-    I --> J[Targeted next question and mastery]
-    E --> K[Abstain when evidence is unclear]
+    A[Student writes by hand] --> B[Ink grouped into lines<br/>changed-line crops]
+    subgraph model [The model reads]
+        C[Meta Muse Spark 1.3<br/>independent readings]
+    end
+    B --> C
+    C --> D[Reconcile readings]
+    subgraph code [Code checks]
+        E[Restricted parser] --> F[SymPy verification]
+    end
+    D --> E
+    D --> K[Abstain when unclear]
+    F --> G[Verified mistake and hint]
+    G --> H[Corrections and learning events]
+    H --> I[Targeted practice and mastery]
 ```
 
 **Reading and checking are different jobs.** Meta's multimodal model interprets the image. Python's restricted parser and SymPy check supported mathematics. The verifier cannot know what was physically written without recognition evidence; two agreeing readings can still share a mistake.
 
-The engineering sits between these stages: grouping freehand strokes into lines, preserving fractions, tracking mathematical task context, reconciling readings, ignoring stale responses, identifying repeat mistakes and recognising a correction without treating every edit as success. Identical in-flight readings are shared, settled lines are remembered, and timeouts and budgets bound model work. Symbolic jobs run in killable processes. [Architecture](docs/ARCHITECTURE.md) · [Verification boundaries](docs/ARCHITECTURE.md#verification-boundaries).
+The engineering sits between these stages: grouping freehand strokes into lines, preserving fractions, tracking mathematical task context, reconciling readings, ignoring stale responses, identifying repeat mistakes and recognising a correction without treating every edit as success. Identical in-flight readings are shared, settled lines are remembered, and timeouts and budgets bound model work. Symbolic jobs run in killable processes. [Architecture](docs/ARCHITECTURE.md) · [Verification boundaries](docs/ARCHITECTURE.md#verification-boundaries) · [Technical overview](docs/hackathon/TECHNICAL_OVERVIEW.md).
 
 ## Built with
 
@@ -97,8 +123,10 @@ The engineering sits between these stages: grouping freehand strokes into lines,
 |---|---|
 | Interface | Next.js 16, React 19, TypeScript, Tailwind CSS 4, perfect-freehand, Lucide |
 | API and mathematics | Python, FastAPI, Pydantic, restricted parser, SymPy, Pillow |
-| Multimodal AI | Meta Model API, Muse Spark 1.3; no model training or fine-tuning |
-| Accounts and storage | Supabase Auth support; SQLite locally or PostgreSQL on the server; IndexedDB for device-local notes |
+| Meta models | Meta Model API with Muse Spark 1.3 for handwriting recognition, hints and explanations; no model training or fine-tuning |
+| Optional Meta paths | Muse Voice Transcribe 1.0 has an implemented transcription path, and Muse Wonder 1.0 can be selected through route configuration. Neither is presented as verified live production inference. |
+| Accounts and storage | Supabase Auth and PostgreSQL on the hosted app, SQLite locally, IndexedDB for device-local notes |
+| Hosting | Vercel for the web app, Modal for the API |
 | Verification | Pytest, Vitest, Playwright, Ruff, ESLint and TypeScript |
 
 ## Run Quack locally

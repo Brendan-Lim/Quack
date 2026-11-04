@@ -39,6 +39,8 @@ MEDIA_NAMES = {
     "adaptive-follow-up.webp",
     "level-mastered.webp",
     "my-mistakes.webp",
+    "social-preview.png",
+    "social-preview.svg",
 }
 
 

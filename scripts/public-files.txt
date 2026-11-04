@@ -135,6 +135,8 @@ docs/media/mistake-hint.webp
 docs/media/my-mistakes.webp
 docs/media/notebook.webp
 docs/media/quack.svg
+docs/media/social-preview.png
+docs/media/social-preview.svg
 docs/media/welcome.webp
 evals/build_dataset.py
 evals/calibration_eval.py
