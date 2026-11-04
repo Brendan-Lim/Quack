@@ -6,13 +6,13 @@
 <p align="center">Built for the Meta Global AI Developer Hackathon 2026<br/>Meta Muse Spark · SymPy · Next.js · FastAPI</p>
 <p align="center"><a href="https://quack-amber-seven.vercel.app">Try Quack</a> · <a href="#run-quack-locally">Run locally</a> · <a href="docs/hackathon/JUDGE_GUIDE.md">Judge guide</a> · <a href="docs/hackathon/TECHNICAL_OVERVIEW.md">Under the hood</a></p>
 
-Meet Quack, a friendly little duck that helps you learn maths as you write. Work through a problem in your own handwriting. When Quack confidently identifies a supported mistake, it gently draws your attention to it. Ask for a hint, try a correction, and keep going.
+Meet Quack, a friendly little duck that helps you learn maths as you write. Work through a problem in your own handwriting. When Quack is confident it has found a supported mistake, it points to that line, gently. Ask for a hint, try a correction, and keep going.
 
 **[Open the public demo](https://quack-amber-seven.vercel.app).** Create your own account, complete six handwriting samples and choose **Learn** or **My Notebook**. The demo uses Supabase accounts and PostgreSQL learning records, with live Meta recognition. Its shared model allowance is limited, and the backend may take a moment to wake after inactivity.
 
 ## A little help while you work
 
-Knowing an answer is wrong isn't always enough. The difficult part is finding the step where your reasoning changed direction. Quack is designed to offer help during handwritten problem-solving, while leaving the next step to you.
+Knowing an answer is wrong isn't always enough. The difficult part is finding the step where your reasoning changed direction. Quack checks your handwritten working as you go and points at that step, but leaves the next move to you.
 
 <img src="docs/media/learning-paths.webp" width="100%" alt="The current Quack catalog, showing all six open mathematics paths." />
 
@@ -39,15 +39,15 @@ Quack checks quietly, quacks on a newly verified mistake, offers encouragement w
 
 ## Write → notice → hint → correct → practise → progress
 
-In the guided question **Simplify `3x + 2x`**, writing `5` drops the variable. With agreeing readings and deterministic verification, Quack can identify that mistake and give a hint without immediately supplying the answer. Correct it to `5x`, and the verified correction informs a follow-up on the same skill.
+In the guided question **Simplify `3x + 2x`**, writing `5` drops the variable. With agreeing readings and deterministic verification, Quack can identify that mistake and give a hint without immediately supplying the answer. Correct it to `5x` and the verified correction feeds a follow-up question on the same skill.
 
-The current adaptation policy is deterministic: it uses verified mathematical events and named misconceptions to select the next question. It is not a separately trained recommendation model. Unclear handwriting is never itself evidence of a misconception.
+The current adaptation policy is deterministic. It picks the next question from verified mathematical events and named misconceptions, and there is no separately trained recommendation model. Unclear handwriting is never treated as evidence of a misconception.
 
 <details>
 <summary><strong>What else is built?</strong></summary>
 
 - **Automatic checks and corrections:** line-based alerts, highlights, stale-reply protection and a lifecycle that distinguishes editing from a verified fix.
-- **A hint ladder:** a nudge, a stronger hint and an explanation, checked against leaking answers too early.
+- **A hint ladder:** a nudge, a stronger hint and an explanation, checked so they don't leak the answer too early.
 - **Circle-to-Ask:** circle supported working to ask for checking or an explanation of its rule.
 - **Learning history:** My Mistakes, verified corrections, targeted practice, session recaps and returning-student continuation.
 - **Mastery progression:** independent answers and assisted corrections earn different credit; levels unlock through progression rules.
@@ -67,7 +67,7 @@ The current adaptation policy is deterministic: it uses verified mathematical ev
 | Trigonometry | Right-triangle ratios and supported common-angle values in degrees | 3 |
 | Calculus | Introductory power-rule differentiation and integration | 3 |
 
-Algebra is the most developed journey. The other five are **playable starter journeys**, adding 13 regular levels, five mastery challenges and 37 question templates. These are focused learning paths, rather than full subject or national curriculum coverage. The [versioned catalog](services/api/quack/curriculum/catalog.v1.json) is the source of truth.
+Algebra is the most developed journey. The other five are **playable starter journeys**, adding 12 regular levels, five mastery challenges and 37 question templates. They are focused learning paths, not full subject or national curriculum coverage. The [versioned catalog](services/api/quack/curriculum/catalog.v1.json) is the source of truth.
 
 <img src="docs/media/algebra-roadmap.webp" width="100%" alt="The connected Algebra Foundations roadmap with levels and mastery progression." />
 
@@ -171,7 +171,7 @@ When checking is enabled or requested, recent-line image crops go to Meta's API.
 | [Screenshot gallery](docs/media/README.md) | [Tests and reproducibility](docs/TESTING.md) |
 | [Documentation index](docs/README.md) | [Public-file policy](docs/PUBLICATION.md) |
 
-A public hosted demo is not yet available. The source can be run locally using the instructions above.
+The source can also be run locally using the instructions above.
 
 ## Credits and licensing
 
