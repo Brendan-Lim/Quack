@@ -1226,7 +1226,7 @@ def _given(values: Values) -> dict[sp.Symbol, sp.Expr]:
 
 
 def _mentions_a_given(left: Node, right: Node, values: Values) -> bool:
-    if any(contains_kind(node, kind) for node in (left, right) for kind in ("deriv", "integral")):
+    if any(contains_kind(node, "deriv") or contains_kind(node, "integral") for node in (left, right)):
         return False
     letters = {letter for letter, _ in values}
     return bool(letters & (_written_variables(left) | _written_variables(right)))
@@ -1826,9 +1826,10 @@ def _check_equation(
     if cur_values is not None:
         after_roots = cur_values
     else:
-        after_roots = _real_solutions(lhs_cur, rhs_cur, variable)
-        if after_roots is None:
+        solved_roots = _real_solutions(lhs_cur, rhs_cur, variable)
+        if solved_roots is None:
             return StepResult("unsupported", operation, line, from_line, reason="not_a_rational_equation")
+        after_roots = solved_roots
 
     same, after_within_before, before_within_after = _same_set(after_roots, before_roots)
     if same:
@@ -1892,7 +1893,7 @@ def _check_equation(
         fingerprint=_fingerprint(
             "equation_solving",
             _canonical_equation(before),
-            _canonical_equation(after) if after is not None else sp.Tuple(*cur_values),
+            _canonical_equation(after) if after is not None else sp.Tuple(*(cur_values or [])),
         ),
     )
 
@@ -2128,14 +2129,15 @@ def _looks_like_identity_claim(left: Node, right: Node, line: LineInput, prior: 
     except MathParseError:
         return False
     # `1 + 1 = 2` poses nothing to solve, so what comes after it isn't a step of solving it.
-    prior_equation = _is_equation(prior) and not _is_numeric_statement(prior)
+    prior_equation = prior is not None and _is_equation(prior) and not _is_numeric_statement(prior)
     if not a.free_symbols and not b.free_symbols:
         # After an equation, `1 = 2` is a result (no solutions) rather than a sum to check.
         if not prior_equation:
             return True
-        if _has_nothing_to_work_out(prior) and left.kind in ("add", "mul", "div", "pow") and _is_literal(right):
+        if (prior is not None and _has_nothing_to_work_out(prior)
+                and left.kind in ("add", "mul", "div", "pow") and _is_literal(right)):
             return True
-        return line.continues == "no" and not _could_follow_without_being_derived(prior, left, right)
+        return prior is not None and line.continues == "no" and not _could_follow_without_being_derived(prior, left, right)
     if (prior_equation and line.continues != "no") or line.operation not in SIMPLIFY_OPERATIONS:
         return False
     if sp.expand(a).free_symbols != b.free_symbols:
@@ -2591,15 +2593,15 @@ def _is_explained_by_alternative(ctx: _Context, line: LineInput) -> bool:
     for prev in previous_readings:
         anchor = prev if ctx.anchor is ctx.prev else ctx.anchor
         context = replace(ctx, prev=prev, anchor=anchor)
-        for stmt in [original, *current_readings]:
-            if stmt is not None and clears(context, stmt):
+        for alternative in [original, *current_readings]:
+            if alternative is not None and clears(context, alternative):
                 return True
     # An equation step can be compared with a line further back than the one above.
     if ctx.anchor_input is not None and ctx.anchor_input is not ctx.prev_line:
         for anchor in _parse_alternatives(ctx.anchor_input):
             context = replace(ctx, anchor=anchor)
-            for stmt in [original, *current_readings]:
-                if stmt is not None and clears(context, stmt):
+            for alternative in [original, *current_readings]:
+                if alternative is not None and clears(context, alternative):
                     return True
     return False
 

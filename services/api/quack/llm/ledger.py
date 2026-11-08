@@ -3,13 +3,33 @@
 from __future__ import annotations
 
 import json
+import logging
+import math
 import threading
 import time
 from collections import defaultdict, deque
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+log = logging.getLogger("quack.ledger")
+
+
+def _nonnegative(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value) or value < 0:
+        raise ValueError("ledger amounts must be finite, nonnegative numbers")
+    return float(value)
+
+
+def _validated(record: object) -> dict:
+    if not isinstance(record, dict):
+        raise ValueError("ledger record must be an object")
+    _nonnegative(record.get("estimated_usd", 0.0))
+    _nonnegative(record.get("timestamp", time.time()))
+    if not isinstance(record.get("session_id", ""), str):
+        raise ValueError("ledger session must be text")
+    return record
 
 
 class BudgetExceeded(Exception):
@@ -51,6 +71,9 @@ class Ledger:
         hourly_limit: float | None = None,
     ) -> None:
         self.path = path
+        for limit in (project_limit, session_limit, request_limit, hourly_limit):
+            if limit is not None:
+                _nonnegative(limit)
         self.project_limit = project_limit
         self.session_limit = session_limit
         self.request_limit = request_limit
@@ -63,6 +86,7 @@ class Ledger:
         self._reserved_project = 0.0
         self._reserved_session: dict[str, float] = defaultdict(float)
         self._read_up_to = 0
+        self._write_failed = False
         if path is not None and path.exists():
             self._repair_tail(path)
             self._catch_up()
@@ -102,7 +126,7 @@ class Ledger:
             data = handle.read()
         complete = data.rfind(b"\n") + 1
         # All or nothing, or a retry after a bad line would count the good ones twice.
-        records = [json.loads(line) for line in data[:complete].splitlines() if line.strip()]
+        records = [_validated(json.loads(line)) for line in data[:complete].splitlines() if line.strip()]
         for record in records:
             self._add(record)
         self._read_up_to += complete
@@ -117,8 +141,8 @@ class Ledger:
 
     def _hourly_spend(self) -> float:
         cutoff = time.time() - 3600
-        while self._recent and self._recent[0][0] < cutoff:
-            self._recent.popleft()
+        # Other processes and wall-clock changes can append records out of timestamp order.
+        self._recent = deque((stamp, cost) for stamp, cost in self._recent if stamp >= cutoff)
         return sum(cost for _, cost in self._recent)
 
     def session_spend(self, session_id: str) -> float:
@@ -126,9 +150,12 @@ class Ledger:
             return self._session_spend.get(session_id, 0.0)
 
     def _check_locked(self, session_id: str, worst_case_usd: float) -> None:
+        _nonnegative(worst_case_usd)
+        if self._write_failed:
+            raise BudgetExceeded("ledger", self.project_spend, self.project_limit)
         try:
             self._catch_up()
-        except json.JSONDecodeError as exc:
+        except (ValueError, OSError) as exc:
             # We can't tell what has been spent, so nothing more gets spent.
             raise BudgetExceeded("ledger", self._project_spend, self.project_limit) from exc
         if worst_case_usd > self.request_limit:
@@ -151,6 +178,13 @@ class Ledger:
         with self._lock:
             self._check_locked(session_id, worst_case_usd)
 
+    def reserve_operation(self, session_id: str, worst_case_usd: float) -> AbstractContextManager[None]:
+        """File accounting reserves each attempt instead of prepaying retries."""
+        return nullcontext()
+
+    def reserve_attempt(self, session_id: str, worst_case_usd: float) -> AbstractContextManager[None]:
+        return self.reserve(session_id, worst_case_usd)
+
     @contextmanager
     def reserve(self, session_id: str, worst_case_usd: float) -> Iterator[None]:
         """Hold a request's worst-case cost against the limits until it has finished."""
@@ -171,21 +205,23 @@ class Ledger:
                         del self._reserved_session[session_id]
 
     def record(self, record: UsageRecord) -> None:
-        payload = asdict(record)
+        payload = _validated(asdict(record))
         with self._lock:
             if self.path is None:
                 self._add(payload)
                 return
-            self.path.parent.mkdir(parents=True, exist_ok=True)
             try:
+                self.path.parent.mkdir(parents=True, exist_ok=True)
                 # First as well, so that a file replaced since the last look is noticed.
                 self._catch_up()
                 with self.path.open("a") as handle:
                     handle.write(json.dumps(payload) + "\n")
                 self._catch_up()
-            except json.JSONDecodeError:
+            except (ValueError, OSError):
                 # The call has already happened, so count it, and the next check will refuse.
                 self._add(payload)
+                self._write_failed = True
+                log.error("ledger_write_failed")
 
 
 def read_records(path: Path) -> list[UsageRecord]:

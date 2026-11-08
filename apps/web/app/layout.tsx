@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], weight: ["700"] });
-const sans = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
+// Keep production builds independent of Google Fonts availability.
+const display = localFont({ src: "./fonts/bricolage-grotesque-latin-700.woff2", variable: "--font-bricolage", weight: "700", display: "swap" });
+const sans = localFont({ src: "./fonts/figtree-latin-variable.woff2", variable: "--font-figtree", weight: "300 900", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Quack",

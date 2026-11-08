@@ -1164,7 +1164,7 @@ class AnalysisService:
             remembered = self._memory.get(session_id, ink.id)
             line = just_read if reread and just_read is not None else remembered or just_read
             if (
-                overruled is not None and line is remembered and just_read is not None
+                overruled is not None and remembered is not None and line is remembered and just_read is not None
                 and remembered.kind == just_read.kind == "math" and not _same_answer(remembered.math, just_read.math)
             ):
                 overruled.add(ink.id)

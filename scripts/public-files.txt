@@ -427,3 +427,16 @@ docs/media/hint-detail.webp
 docs/media/correction-detail.webp
 docs/media/practice-detail.webp
 docs/media/learning-detail.webp
+.github/workflows/verify.yml
+apps/web/app/fonts/bricolage-grotesque-latin-700.woff2
+apps/web/app/fonts/figtree-latin-variable.woff2
+apps/web/tests/production/safety.spec.ts
+apps/web/tests/unit/release-safety.test.ts
+docs/RELEASE_SAFETY.md
+package.json
+scripts/check_release.py
+scripts/verify.py
+services/api/quack/observability.py
+services/api/requirements-tooling.lock
+services/api/tests/test_release_safety.py
+services/api/tests/fixtures/recorded-routing.json

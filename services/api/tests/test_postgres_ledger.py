@@ -1,14 +1,20 @@
 """Run only against a disposable database named quack_ledger_test."""
 
+import asyncio
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from dataclasses import replace
 
+import httpx
 import psycopg
 import pytest
+import respx
 
 from quack.llm.ledger import BudgetExceeded, UsageRecord
 from quack.llm.postgres_ledger import PostgresLedger
+from quack.llm.router import DEFAULT_ROUTES, MAX_ATTEMPTS, ModelError, ModelRouter, Purpose
+from tests.test_release_safety import Answer, completion
 
 
 @pytest.fixture
@@ -16,8 +22,9 @@ def url():  # type: ignore[no-untyped-def]
     value = os.environ.get("QUACK_LEDGER_TEST_DATABASE_URL", "")
     if not value:
         pytest.skip("set QUACK_LEDGER_TEST_DATABASE_URL to a disposable quack_ledger_test database")
-    if psycopg.conninfo.conninfo_to_dict(value).get("dbname") != "quack_ledger_test":
-        pytest.fail("refusing ledger tests against a database not named quack_ledger_test")
+    info = psycopg.conninfo.conninfo_to_dict(value)
+    if info.get("dbname") != "quack_ledger_test" or info.get("host") not in {"127.0.0.1", "localhost", "::1"}:
+        pytest.fail("ledger tests require a local disposable database named quack_ledger_test")
     ledger = PostgresLedger(value, 1, 1, 1, 1)
     ledger.database.execute("TRUNCATE quack_model_usage, quack_model_debits")
     ledger.database.close()
@@ -130,3 +137,73 @@ def test_quota_and_usage_tables_have_no_public_rls_access(url):  # type: ignore[
             connection.execute("SET ROLE quack_ledger_public")
             for table in ("quack_model_debits", "quack_model_usage"):
                 assert connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0
+
+
+@respx.mock
+@pytest.mark.parametrize("failure", ["timeout", "invalid_output"])
+async def test_router_retries_share_one_durable_operation_debit(url, settings, monkeypatch, failure):  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("quack.llm.router._retry_delay", lambda *_: 0)
+    first = httpx.ReadTimeout("slow") if failure == "timeout" else completion("not JSON")
+    route = respx.post("https://api.test/v1/chat/completions").mock(side_effect=[first, completion()])
+    with ledger(url) as instance:
+        router = ModelRouter(settings, instance)
+        result = await router.complete_json(
+            Purpose.EXPLAIN, [], Answer, session_id="alice:s",
+            route=replace(DEFAULT_ROUTES[Purpose.EXPLAIN], retry_timeouts=True),
+        )
+        assert result.value.answer == "ok"
+        assert route.call_count == 2
+        debits = instance.database.query("SELECT * FROM quack_model_debits")
+        assert len(debits) == 1
+        receipts = instance.database.query("SELECT * FROM quack_model_usage")
+        assert len(receipts) == 2
+        assert {row["debit_id"] for row in receipts} == {debits[0]["id"]}
+        assert [row["record"]["attempt"] for row in receipts] == [1, 2]
+        # Missing/failed usage cannot refund any part of the original retry allowance.
+        assert instance.project_spend > sum(float(row["estimated_usd"]) for row in receipts)
+
+
+@respx.mock
+async def test_router_cancellation_records_receipt_and_retains_reserve_after_restart(url, settings):  # type: ignore[no-untyped-def]
+    called = asyncio.Event()
+
+    async def waiting(_):  # type: ignore[no-untyped-def]
+        called.set()
+        await asyncio.Event().wait()
+        return completion()
+
+    respx.post("https://api.test/v1/chat/completions").mock(side_effect=waiting)
+    with ledger(url) as instance:
+        task = asyncio.create_task(ModelRouter(settings, instance).complete_json(Purpose.HINT, [], Answer, session_id="alice:s"))
+        await asyncio.wait_for(called.wait(), timeout=5)
+        reserved = instance.project_spend
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        receipt = instance.database.one("SELECT record FROM quack_model_usage")["record"]
+        assert receipt["error_category"] == "cancelled"
+        assert receipt["estimated_usd"] == pytest.approx(reserved / MAX_ATTEMPTS)
+    with ledger(url) as restarted:
+        assert restarted.project_spend == pytest.approx(reserved)
+        assert restarted.session_spend("alice:rotated") == pytest.approx(reserved)
+
+
+@respx.mock
+async def test_failed_durable_reservation_never_contacts_provider(url, settings):  # type: ignore[no-untyped-def]
+    route = respx.post("https://api.test/v1/chat/completions").mock(return_value=completion())
+    with ledger(url) as instance:
+        instance.database.close()
+        with pytest.raises(ModelError, match="ledger"):
+            await ModelRouter(settings, instance).complete_json(Purpose.HINT, [], Answer)
+    assert route.call_count == 0
+
+
+@pytest.mark.parametrize("bad", [-1, float("nan"), float("inf"), True, "0.1", None])
+def test_invalid_receipt_preserves_debit_and_blocks_further_spending(url, bad):  # type: ignore[no-untyped-def]
+    with ledger(url) as instance:
+        with pytest.raises(BudgetExceeded), instance.reserve("alice:s", .02):
+            instance.record(UsageRecord("test", "low", "transcribe", "test", estimated_usd=bad))
+        assert instance.project_spend == pytest.approx(.06)
+        assert instance.database.one("SELECT COUNT(*) AS n FROM quack_model_usage")["n"] == 0
+        with pytest.raises(BudgetExceeded), instance.reserve("bob:s", .001):
+            pytest.fail("corrupt receipt did not block spending")

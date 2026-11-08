@@ -79,6 +79,7 @@ export type LineTrace = {
 };
 
 export type AnalyzeResponse = {
+  // The server validates that alerts have new verified mistakes, unique ids, and no resolved overlap.
   snapshotVersion: number;
   requestId: string | null;
   status: AnalysisStatus;

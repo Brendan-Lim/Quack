@@ -3,5 +3,5 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
-  test: { environment: "jsdom", include: ["tests/unit/**/*.test.ts"] },
+  test: { allowOnly: false, environment: "jsdom", include: ["tests/unit/**/*.test.ts"] },
 });

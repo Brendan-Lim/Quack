@@ -69,7 +69,8 @@ def _child(conn: Connection, job: object, *args: object) -> None:
     try:
         conn.send(("ok", job(*args)))  # type: ignore[operator]
     except BaseException as exc:  # noqa: BLE001
-        conn.send(("error", repr(exc)))
+        # Exception messages can include the student's parsed expression.
+        conn.send(("error", type(exc).__name__))
     finally:
         conn.close()
 
@@ -118,7 +119,7 @@ class VerifierPool:
                 process.join(1)
         if status != "ok":
             # A bug in checking one line shouldn't take down analysis. Quack just stays quiet.
-            log.error("verification_error", extra={"error": payload})
+            log.error("verification_error", extra={"error_type": payload})
             raise VerificationFailed("error")
         return payload
 

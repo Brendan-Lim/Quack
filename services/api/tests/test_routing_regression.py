@@ -15,12 +15,11 @@ from quack.config import Settings
 from quack.llm.ledger import Ledger
 from quack.llm.router import ModelRouter, Purpose
 
-RESULTS = Path(__file__).resolve().parents[3] / "evals" / "results"
+RESULTS = Path(__file__).parent / "fixtures" / "recorded-routing.json"
 
 
 def recorded(run: str, config: str | None = None) -> list[dict]:
-    with (RESULTS / run / "results.jsonl").open() as handle:
-        rows = [json.loads(line) for line in handle if line.strip()]
+    rows = json.loads(RESULTS.read_text())["runs"][run]
     return [row for row in rows if config is None or row["config"] == config]
 
 

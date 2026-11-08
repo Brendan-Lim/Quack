@@ -40,6 +40,9 @@ def _empty_postgres() -> None:
         return
     import psycopg
 
+    info = psycopg.conninfo.conninfo_to_dict(postgres)
+    if info.get("dbname") != "quack_accounts_test" or info.get("host") not in {"127.0.0.1", "localhost", "::1"}:
+        pytest.fail("account tests require a local disposable database named quack_accounts_test")
     with psycopg.connect(postgres, autocommit=True) as connection:
         # Each test's server leaves a connection open, and they'd soon use up the limit.
         connection.execute("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid()")

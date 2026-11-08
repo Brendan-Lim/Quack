@@ -972,4 +972,4 @@ class PreparedHelp:
 
 def _log_failure(task: asyncio.Task[HelpResult]) -> None:
     if not task.cancelled() and task.exception() is not None:
-        log.warning("hint_preparation_failed", extra={"error": repr(task.exception())})
+        log.warning("hint_preparation_failed", extra={"error_type": type(task.exception()).__name__})

@@ -14,13 +14,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
 
+from quack.schemas import PracticeTopic
 from quack.services.handwriting import RESTATED_QUESTION, HandwritingReading, ReadLine
 from quack.services.math_parser import MathParseError, normalise, parse_expression, parse_statement
 from quack.services.math_verifier import LineInput, TaskIntent, names_given_values
 from quack.services.verifier_pool import VerificationFailed, shared_pool
 
 MAX_TRIES = 8
-SUPPORTED = (
+SUPPORTED: tuple[PracticeTopic, ...] = (
     "addition_subtraction",
     "multiplication",
     "division",
