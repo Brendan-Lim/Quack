@@ -32,6 +32,9 @@ def main() -> int:
     parser.add_argument("--build", action="store_true", help="also compile the production web app")
     args = parser.parse_args()
     env = test_environment()
+    if args.browser:
+        # Existing visual/performance journeys are opt-in during development, required for release.
+        env.update(QUACK_PERF="1", QUACK_SCREENSHOTS="1")
     if not env.get("QUACK_LEDGER_TEST_DATABASE_URL"):
         parser.error("set QUACK_LEDGER_TEST_DATABASE_URL to a disposable local quack_ledger_test database")
     gitleaks = env.get("QUACK_GITLEAKS") or shutil.which("gitleaks")
@@ -56,8 +59,12 @@ def main() -> int:
         checks.append(("Production build", "apps/web", ["npm", "run", "build"]))
         if args.browser:
             checks.append(("Compiled app safety", "apps/web", ["npm", "run", "test:production"]))
+            checks.append(("Compiled browser completeness", ".", [python, "scripts/check_browser_results.py",
+                           "apps/web/test-results/production-results.json"]))
     if args.browser:
         checks.append(("Browser journeys (fake model)", "apps/web", ["npm", "run", "test:e2e"]))
+        checks.append(("Browser journey completeness", ".", [python, "scripts/check_browser_results.py",
+                       "apps/web/test-results/results.json"]))
     for label, directory, command in checks:
         print(f"\n{label}", flush=True)
         result = subprocess.run(command, cwd=ROOT / directory, env=env, check=False)

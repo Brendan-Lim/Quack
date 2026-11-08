@@ -24,6 +24,9 @@ reachable publication history, staged and historical secrets, Ruff, mypy, offlin
 ESLint, TypeScript, frontend units, the production build, compiled browser checks and all existing
 browser journeys. It refuses skipped backend tests and unknown pytest settings or markers.
 The two paid live tests are deliberately deselected. No model credits are needed.
+Release browser verification enables the existing performance and screenshot journeys as well.
+JSON reports must contain passing cases and zero skipped, failed or flaky cases. Compiled and
+development-server evidence uses separate output directories so the latter cannot erase the former.
 Historical prompt comparisons use a classification-only fixture checked against the published
 synthetic dataset. It contains no raw model text, usage records, images or private evaluation paths.
 

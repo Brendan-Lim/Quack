@@ -16,6 +16,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: true,
   retries: 0,
+  outputDir: "test-results/journeys",
   reporter: [["list"], ["json", { outputFile: "test-results/results.json" }]],
   use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 }, trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: [

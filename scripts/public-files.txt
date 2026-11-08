@@ -440,3 +440,4 @@ services/api/quack/observability.py
 services/api/requirements-tooling.lock
 services/api/tests/test_release_safety.py
 services/api/tests/fixtures/recorded-routing.json
+scripts/check_browser_results.py

@@ -19,9 +19,11 @@ def main() -> int:
         if not path.is_file():
             errors.append(f"Missing published file: {name}")
             continue
-        if "/tests/" in name and path.suffix in {".ts", ".tsx", ".py"}:
-            if re.search(r"\b(?:test|it|describe)\s*\.\s*only\s*[(<]", path.read_text()):
-                errors.append(f"Focused test committed: {name}")
+        if (
+            "/tests/" in name and path.suffix in {".ts", ".tsx", ".py"}
+            and re.search(r"\b(?:test|it|describe)\s*\.\s*only\s*[(<]", path.read_text())
+        ):
+            errors.append(f"Focused test committed: {name}")
     package = json.loads((ROOT / "apps/web/package.json").read_text())
     locked = json.loads((ROOT / "apps/web/package-lock.json").read_text())["packages"][""]
     for group in ("dependencies", "devDependencies"):
