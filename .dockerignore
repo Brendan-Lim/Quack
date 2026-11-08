@@ -11,6 +11,7 @@
 !apps/web/public/
 !services/api/quack/
 !apps/web/app/collect/
+!apps/web/app/fonts/
 !apps/web/components/account/
 !apps/web/components/ask/
 !apps/web/components/collect/
@@ -29,6 +30,8 @@
 !apps/web/.gitignore
 !apps/web/app/collect/page.tsx
 !apps/web/app/favicon.ico
+!apps/web/app/fonts/bricolage-grotesque-latin-700.woff2
+!apps/web/app/fonts/figtree-latin-variable.woff2
 !apps/web/app/globals.css
 !apps/web/app/layout.tsx
 !apps/web/app/page.tsx
@@ -121,6 +124,7 @@
 !services/api/quack/llm/report.py
 !services/api/quack/llm/router.py
 !services/api/quack/main.py
+!services/api/quack/observability.py
 !services/api/quack/prompts/__init__.py
 !services/api/quack/prompts/ask.v1.md
 !services/api/quack/prompts/explain.v1.md

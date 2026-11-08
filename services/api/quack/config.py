@@ -15,18 +15,19 @@ REPO_ROOT = API_ROOT.parent.parent
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(REPO_ROOT / ".env", API_ROOT / ".env"), extra="ignore", populate_by_name=True
+        env_file=(REPO_ROOT / ".env", API_ROOT / ".env"), extra="ignore", populate_by_name=True,
+        allow_inf_nan=False,
     )
 
     model_api_key: str = Field(default="", alias="MODEL_API_KEY", repr=False)
     model_api_base_url: str = Field(default="https://api.meta.ai/v1", alias="MODEL_API_BASE_URL")
 
     # Development-only routes stay hidden unless this is set on purpose.
-    env: str = Field(default="production", alias="QUACK_ENV")
+    env: Literal["production", "development"] = Field(default="production", alias="QUACK_ENV")
     cors_origins: str = Field(default="http://localhost:3000", alias="QUACK_CORS_ORIGINS")
-    rate_limit_per_minute: int = Field(default=60, alias="QUACK_RATE_LIMIT_PER_MINUTE")
+    rate_limit_per_minute: int = Field(default=60, gt=0, alias="QUACK_RATE_LIMIT_PER_MINUTE")
     # Client addresses can be forged through a proxy, so this cap is what actually bounds spend rate.
-    global_rate_limit_per_minute: int = Field(default=300, alias="QUACK_GLOBAL_RATE_LIMIT_PER_MINUTE")
+    global_rate_limit_per_minute: int = Field(default=300, gt=0, alias="QUACK_GLOBAL_RATE_LIMIT_PER_MINUTE")
 
     # JSON object of per-purpose overrides, for example:
     # {"transcribe": {"model": "muse-wonder-1.0", "reasoning_effort": "medium"}}
@@ -40,21 +41,21 @@ class Settings(BaseSettings):
     confirm_in_parallel: bool = Field(default=True, alias="QUACK_CONFIRM_IN_PARALLEL")
     # How long the second reading can take before another goes alongside it. Most finish in 6 s, and
     # those that use up all their tokens take 19 s. See `AnalysisService._second_reading`.
-    second_reading_patience_s: float = Field(default=14.0, alias="QUACK_SECOND_READING_PATIENCE_S")
+    second_reading_patience_s: float = Field(default=14.0, gt=0, alias="QUACK_SECOND_READING_PATIENCE_S")
     # Re-read when the fast reading was unclear. Off until evaluation shows it pays for itself.
     second_reading_on_uncertain: bool = Field(default=False, alias="QUACK_SECOND_READING_ON_UNCERTAIN")
-    reading_cache_size: int = Field(default=256, alias="QUACK_READING_CACHE_SIZE")
+    reading_cache_size: int = Field(default=256, ge=0, alias="QUACK_READING_CACHE_SIZE")
     # Lines read and agreed on, across sessions, so unchanged lines needn't be read again.
-    line_memory_size: int = Field(default=20_000, alias="QUACK_LINE_MEMORY_SIZE")
-    verify_timeout_s: float = Field(default=4.0, alias="QUACK_VERIFY_TIMEOUT_S")
+    line_memory_size: int = Field(default=20_000, ge=0, alias="QUACK_LINE_MEMORY_SIZE")
+    verify_timeout_s: float = Field(default=4.0, gt=0, alias="QUACK_VERIFY_TIMEOUT_S")
 
     # Credit guard rails. The project ceiling leaves US$15 of the US$150 allocation in reserve.
-    budget_project_usd: float = Field(default=135.0, alias="QUACK_BUDGET_PROJECT_USD")
-    budget_session_usd: float = Field(default=2.0, alias="QUACK_BUDGET_SESSION_USD")
-    budget_request_usd: float = Field(default=0.50, alias="QUACK_BUDGET_REQUEST_USD")
+    budget_project_usd: float = Field(default=135.0, ge=0, alias="QUACK_BUDGET_PROJECT_USD")
+    budget_session_usd: float = Field(default=2.0, ge=0, alias="QUACK_BUDGET_SESSION_USD")
+    budget_request_usd: float = Field(default=0.50, ge=0, alias="QUACK_BUDGET_REQUEST_USD")
     # A session id is chosen by the client, so per-session limits only stop a runaway tab.
     # This one stops anyone draining the credits quickly, whatever ids they use.
-    budget_hourly_usd: float = Field(default=5.0, alias="QUACK_BUDGET_HOURLY_USD")
+    budget_hourly_usd: float = Field(default=5.0, ge=0, alias="QUACK_BUDGET_HOURLY_USD")
     ledger_path: Path = Field(default=API_ROOT / "var" / "usage.jsonl", alias="QUACK_LEDGER_PATH")
     ledger_backend: Literal["file", "postgres"] = Field(default="file", alias="QUACK_LEDGER_BACKEND")
 

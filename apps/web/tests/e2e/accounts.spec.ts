@@ -212,6 +212,7 @@ test.describe("calibration", () => {
     await page.getByTestId("calibration-start").click();
     await expect(page.getByTestId("calibration-next")).toBeDisabled();
     await write(page, "1");
+    await expect(page.getByTestId("calibration-next")).toBeEnabled();
     await page.getByTestId("calibration-next").click();
     await expect(page.getByTestId("calibration-problem")).toContainText("unfinished");
     await expect(page.getByTestId("calibration-progress")).toHaveAttribute("aria-valuenow", "0");

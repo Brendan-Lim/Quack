@@ -43,6 +43,7 @@ from quack.schemas import (
     PracticeReveal,
     PracticeStart,
     PracticeSummary,
+    PracticeTopic,
     PracticeTopicOption,
     Profile,
     Recap,
@@ -218,14 +219,16 @@ def _owned(store: UserStore, user_id: str, session_id: str | None) -> str | None
     return session_id if session_id and store.session(user_id, session_id) else None
 
 
-def _general_topic(store: UserStore, user_id: str, origin: str | None) -> str:
+def _general_topic(store: UserStore, user_id: str, origin: str | None) -> PracticeTopic:
     """What the recap recommended, if it did, and otherwise simply the first one on the list."""
 
     session = store.session(user_id, origin) if origin else None
     if session and session["recap_json"]:
         recommendation = Recap.model_validate_json(session["recap_json"]).recommendation
         if recommendation:
-            return recommendation.topic
+            for topic in practice_service.SUPPORTED:
+                if topic == recommendation.topic:
+                    return topic
     return practice_service.SUPPORTED[0]
 
 
@@ -498,7 +501,11 @@ def build_account_router(
     @router.post("/practice/sessions")
     async def start_practice(body: PracticeStart, identity: Identity = you) -> PracticeProblem:
         user_id = identity.user_id
-        topic = body.topic or await asyncio.to_thread(_general_topic, store, user_id, body.origin_session_id)
+        topic: PracticeTopic
+        if body.topic is not None:
+            topic = body.topic
+        else:
+            topic = await asyncio.to_thread(_general_topic, store, user_id, body.origin_session_id)
         origin = await asyncio.to_thread(_owned, store, user_id, body.origin_session_id)
         session = await asyncio.to_thread(store.new_practice_session, user_id, origin, topic)
         # Only one of the student's own. Anything else simply isn't linked.

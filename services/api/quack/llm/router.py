@@ -8,14 +8,18 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import random
 import time
 from dataclasses import dataclass, replace
 from enum import StrEnum
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 import openai
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
+from openai.types.shared import ReasoningEffort
+from openai.types.shared_params import ResponseFormatJSONSchema
 from pydantic import BaseModel, ValidationError
 
 from quack.config import Settings
@@ -48,6 +52,18 @@ class ModelRoute:
     max_tokens: int
     # A student is waiting. After a timeout, the next pause tries again sooner than a retry would end.
     retry_timeouts: bool = True
+
+    def __post_init__(self) -> None:
+        if self.model not in ALLOWED_TOKEN_MODELS:
+            raise ValueError("model has no known price")
+        if self.reasoning_effort not in ("none", "minimal", "low", "medium", "high"):
+            raise ValueError("invalid reasoning effort")
+        if isinstance(self.timeout_s, bool) or not math.isfinite(self.timeout_s) or self.timeout_s <= 0:
+            raise ValueError("model timeout must be finite and positive")
+        if type(self.max_tokens) is not int or self.max_tokens <= 0:
+            raise ValueError("model token limit must be a positive integer")
+        if type(self.retry_timeouts) is not bool:
+            raise ValueError("retry_timeouts must be a boolean")
 
 
 # Reading is timed per call in docs/IPAD_TEST_ROUND_2.md. The two readings run at different efforts
@@ -178,7 +194,7 @@ class ModelRouter:
         client = self._get_client()
         worst_case = worst_case_output_cost(chosen.model, chosen.max_tokens) + ASSUMED_MAX_INPUT_USD
         try:
-            with self.ledger.reserve(session_id, worst_case):
+            with self.ledger.reserve_operation(session_id, worst_case):
                 return await self._send(purpose, messages, schema, chosen, client, session_id, run_id)
         except BudgetExceeded as exc:
             log.warning("budget_exceeded", extra={"scope": exc.scope, "purpose": str(purpose)})
@@ -194,107 +210,117 @@ class ModelRouter:
         session_id: str,
         run_id: str,
     ) -> StructuredResult[T]:
-        response_format = {
+        response_format: ResponseFormatJSONSchema = {
             "type": "json_schema",
             "json_schema": {"name": schema.__name__, "schema": schema.model_json_schema()},
         }
 
         last_error: ModelError | None = None
         for attempt in range(1, MAX_ATTEMPTS + 1):
-            record = UsageRecord(
-                model=chosen.model,
-                reasoning_effort=chosen.reasoning_effort,
-                purpose=str(purpose),
-                run_id=run_id,
-                session_id=session_id,
-                attempt=attempt,
-            )
-            started = time.perf_counter()
-            try:
-                response = await client.chat.completions.create(
+            # Each retry is another billable call. Re-check committed spend and reserve atomically.
+            worst_case = worst_case_output_cost(chosen.model, chosen.max_tokens) + ASSUMED_MAX_INPUT_USD
+            with self.ledger.reserve_attempt(session_id, worst_case):
+                record = UsageRecord(
                     model=chosen.model,
-                    messages=messages,  # type: ignore[arg-type]
-                    response_format=response_format,  # type: ignore[arg-type]
-                    max_tokens=chosen.max_tokens,
-                    reasoning_effort=chosen.reasoning_effort,  # type: ignore[arg-type]
-                    timeout=chosen.timeout_s,
-                    extra_body={"prompt_cache_key": f"quack-{schema.__name__}"},
+                    reasoning_effort=chosen.reasoning_effort,
+                    purpose=str(purpose),
+                    run_id=run_id,
+                    session_id=session_id,
+                    attempt=attempt,
                 )
-            except (openai.APIError, TimeoutError) as exc:
-                category, retryable, status = _categorise(exc)
-                record.elapsed_ms = (time.perf_counter() - started) * 1000
-                record.http_status = status
-                record.error_category = category
-                # The model may have done the work and billed for it, with the reply lost on the way.
-                # A refused connection never reached it, so that costs nothing.
-                if isinstance(exc, openai.APITimeoutError | TimeoutError):
-                    record.estimated_usd = worst_case_output_cost(chosen.model, chosen.max_tokens)
-                self.ledger.record(record)
-                log.warning("model_request_failed", extra={"category": category, "status": status, "attempt": attempt})
-                last_error = ModelError(category, f"model request failed: {category}", status)
-                if category == "timeout" and not chosen.retry_timeouts:
+                started = time.perf_counter()
+                try:
+                    response = await client.chat.completions.create(
+                        model=chosen.model,
+                        messages=cast(list[ChatCompletionMessageParam], messages),
+                        response_format=response_format,
+                        max_tokens=chosen.max_tokens,
+                        reasoning_effort=cast(ReasoningEffort, chosen.reasoning_effort),
+                        timeout=chosen.timeout_s,
+                        extra_body={"prompt_cache_key": f"quack-{schema.__name__}"},
+                    )
+                except asyncio.CancelledError:
+                    # Cancelling our wait doesn't prove the provider stopped its billable work.
+                    record.elapsed_ms = (time.perf_counter() - started) * 1000
+                    record.error_category = "cancelled"
+                    record.estimated_usd = worst_case
+                    self.ledger.record(record)
+                    log.info("model_request_cancelled", extra={"purpose": str(purpose), "attempt": attempt})
+                    raise
+                except (openai.APIError, TimeoutError) as exc:
+                    category, retryable, status = _categorise(exc)
+                    record.elapsed_ms = (time.perf_counter() - started) * 1000
+                    record.http_status = status
+                    record.error_category = category
+                    # The model may have done the work and billed for it, with the reply lost on the way.
+                    # A refused connection never reached it, so that costs nothing.
+                    if isinstance(exc, openai.APITimeoutError | TimeoutError):
+                        record.estimated_usd = worst_case_output_cost(chosen.model, chosen.max_tokens)
+                    self.ledger.record(record)
+                    log.warning("model_request_failed", extra={"category": category, "status": status, "attempt": attempt})
+                    last_error = ModelError(category, f"model request failed: {category}", status)
+                    if category == "timeout" and not chosen.retry_timeouts:
+                        raise last_error from exc
+                    if retryable and attempt < MAX_ATTEMPTS:
+                        delay = _retry_delay(attempt, exc)
+                        if delay is not None:
+                            await asyncio.sleep(delay)
+                            continue
                     raise last_error from exc
-                if retryable and attempt < MAX_ATTEMPTS:
-                    delay = _retry_delay(attempt, exc)
-                    if delay is not None:
-                        await asyncio.sleep(delay)
+
+                record.elapsed_ms = (time.perf_counter() - started) * 1000
+                record.http_status = 200
+                for key, token_count in _usage_fields(response.usage).items():
+                    setattr(record, key, token_count)
+                record.estimated_usd = (
+                    token_cost(chosen.model, record.input_tokens, record.cached_input_tokens, record.output_tokens)
+                    if response.usage is not None
+                    # It says nothing about what it cost. A budget mustn't take that to mean nothing.
+                    else worst_case_output_cost(chosen.model, chosen.max_tokens)
+                )
+
+                if not response.choices:
+                    record.error_category = "invalid_output"
+                    self.ledger.record(record)
+                    log.warning("model_output_invalid", extra={"attempt": attempt, "purpose": str(purpose)})
+                    last_error = ModelError("invalid_output", "model response had no choices")
+                    if attempt < MAX_ATTEMPTS - 1:
                         continue
-                raise last_error from exc
+                    raise last_error
 
-            record.elapsed_ms = (time.perf_counter() - started) * 1000
-            record.http_status = 200
-            for key, value in _usage_fields(response.usage).items():
-                setattr(record, key, value)
-            record.estimated_usd = (
-                token_cost(chosen.model, record.input_tokens, record.cached_input_tokens, record.output_tokens)
-                if response.usage is not None
-                # It says nothing about what it cost. A budget mustn't take that to mean nothing.
-                else worst_case_output_cost(chosen.model, chosen.max_tokens)
-            )
+                choice = response.choices[0]
+                if choice.finish_reason == "length":
+                    # Reasoning shares the token limit, so a retry at the same limit tends to fail
+                    # the same way and costs the same again.
+                    record.error_category = "truncated"
+                    self.ledger.record(record)
+                    raise ModelError("truncated", "output hit max_tokens before finishing")
 
-            if not response.choices:
-                record.error_category = "invalid_output"
+                try:
+                    value = schema.model_validate_json(choice.message.content or "")
+                except ValidationError as exc:
+                    record.error_category = "invalid_output"
+                    self.ledger.record(record)
+                    log.warning("model_output_invalid", extra={"attempt": attempt, "purpose": str(purpose)})
+                    last_error = ModelError("invalid_output", "model output failed schema validation")
+                    if attempt < MAX_ATTEMPTS - 1:
+                        continue
+                    raise last_error from exc
+
                 self.ledger.record(record)
-                log.warning("model_output_invalid", extra={"attempt": attempt, "purpose": str(purpose)})
-                last_error = ModelError("invalid_output", "model response had no choices")
-                if attempt < MAX_ATTEMPTS - 1:
-                    continue
-                raise last_error
+                log.info(
+                    "model_request",
+                    extra={
+                        "purpose": str(purpose),
+                        "model": chosen.model,
+                        "effort": chosen.reasoning_effort,
+                        "ms": round(record.elapsed_ms),
+                        "input": record.input_tokens,
+                        "cached": record.cached_input_tokens,
+                        "output": record.output_tokens,
+                        "usd": round(record.estimated_usd, 6),
+                    },
+                )
+                return StructuredResult(value, record)
 
-            choice = response.choices[0]
-            if choice.finish_reason == "length":
-                # Reasoning shares the token limit, so a retry at the same limit tends to fail
-                # the same way and costs the same again.
-                record.error_category = "truncated"
-                self.ledger.record(record)
-                raise ModelError("truncated", "output hit max_tokens before finishing")
-
-            try:
-                value = schema.model_validate_json(choice.message.content or "")
-            except ValidationError as exc:
-                record.error_category = "invalid_output"
-                self.ledger.record(record)
-                log.warning("model_output_invalid", extra={"attempt": attempt, "purpose": str(purpose)})
-                last_error = ModelError("invalid_output", "model output failed schema validation")
-                if attempt < MAX_ATTEMPTS - 1:
-                    continue
-                raise last_error from exc
-
-            self.ledger.record(record)
-            log.info(
-                "model_request",
-                extra={
-                    "purpose": str(purpose),
-                    "model": chosen.model,
-                    "effort": chosen.reasoning_effort,
-                    "ms": round(record.elapsed_ms),
-                    "input": record.input_tokens,
-                    "cached": record.cached_input_tokens,
-                    "output": record.output_tokens,
-                    "usd": round(record.estimated_usd, 6),
-                },
-            )
-            return StructuredResult(value, record)
-
-        assert last_error is not None
-        raise last_error
+        raise last_error or ModelError("invalid_output", "model request produced no result")

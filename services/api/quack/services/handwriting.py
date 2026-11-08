@@ -6,7 +6,7 @@ import base64
 import hashlib
 import io
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict
@@ -113,8 +113,9 @@ def sanitise_image(data_url: str) -> tuple[str, str]:
             if width * height > MAX_IMAGE_PIXELS:
                 raise ImageRejected("image has too many pixels")
             probe.verify()
-        with Image.open(io.BytesIO(raw)) as image:
-            image.load()
+        with Image.open(io.BytesIO(raw)) as source:
+            source.load()
+            image: Image.Image = source
             if image.mode in ("RGBA", "LA", "P"):
                 rgba = image.convert("RGBA")
                 flattened = Image.new("RGB", rgba.size, "white")
@@ -161,7 +162,7 @@ async def read_lines(
     content.append({"type": "text", "text": f"{lead} It has {line_count} written {noun}."})
     content.append({"type": "image_url", "image_url": {"url": image}})
     instructions = f"{COMPACT_PROMPT}\n\n{WRITER_REFERENCES_PROMPT}" if references else COMPACT_PROMPT
-    messages = [
+    messages: list[dict[str, Any]] = [
         {"role": "developer", "content": instructions},
         {"role": "user", "content": content},
     ]
@@ -195,7 +196,7 @@ async def read_handwriting(
             }
         )
         content.append({"type": "image_url", "image_url": {"url": page_context}})
-    messages = [
+    messages: list[dict[str, Any]] = [
         # Stable instructions first, so that automatic prefix caching applies.
         {"role": "developer", "content": DEVELOPER_PROMPT},
         {"role": "user", "content": content},

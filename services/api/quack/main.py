@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
-import json
 import logging
 import sys
 import time
@@ -28,6 +27,7 @@ from quack.llm.ledger import Ledger
 from quack.llm.postgres_ledger import PostgresLedger
 from quack.llm.report import summarise
 from quack.llm.router import ModelError, ModelRouter
+from quack.observability import JsonFormatter, RequestDiagnostics
 from quack.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -63,7 +63,6 @@ from quack.services.verifier_pool import shared_pool
 from quack.services.voice import VoiceRejected, classify_intent, transcribe_wav
 from quack.services.writer_references import select_references
 
-_STANDARD_LOG_FIELDS = set(logging.makeLogRecord({}).__dict__) | {"message", "asctime", "taskName"}
 MAX_REQUEST_BYTES = 10_000_000
 MAX_AUDIO_BYTES = 8_000_000
 MAX_TRACKED_CLIENTS = 10_000
@@ -71,13 +70,6 @@ ACCOUNT_ROUTE_ALLOWANCE = 5
 # However long the model takes, a student who asked for an explanation gets one within this. On the iPad
 # on 2026-11-03 one took 75 s: two 30 s timeouts, each tried again, before a third answered.
 EXPLAIN_DEADLINE_S = 25.0
-
-
-class JsonFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:
-        payload = {"level": record.levelname, "logger": record.name, "event": record.getMessage()}
-        payload.update({k: v for k, v in record.__dict__.items() if k not in _STANDARD_LOG_FIELDS})
-        return json.dumps(payload, default=str)
 
 
 def _configure_logging() -> None:
@@ -148,7 +140,12 @@ def _same_origin(request: Request, allowed: list[str]) -> bool:
         return True
     # Host can be anything under DNS rebinding, where a site's name is pointed at this machine. So
     # beyond the configured origins, a match only counts on a local or private address.
-    parts = urlsplit(origin)
+    try:
+        parts = urlsplit(origin)
+    except ValueError:
+        return False
+    if parts.scheme not in ("http", "https") or parts.username or parts.password:
+        return False
     hosts = (request.headers.get("host"), request.headers.get("x-forwarded-host"))
     return _is_local_host(parts.hostname) and parts.netloc in hosts
 
@@ -254,7 +251,7 @@ def _assistance(
     level: int, text: str, source: Literal["model", "template"], error: ModelError | None, started: float
 ) -> AssistanceResponse:
     total_ms = round((time.perf_counter() - started) * 1000, 1)
-    logging.getLogger("quack.help").info("help", extra={"level": level, "source": source, "total_ms": total_ms})
+    logging.getLogger("quack.help").info("help", extra={"help_level": level, "source": source, "total_ms": total_ms})
     return AssistanceResponse(
         level=level, text=text, source=source, model_issue=model_issue(error) if error else None, total_ms=total_ms
     )
@@ -285,6 +282,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         allow_origins=state.settings.cors_origin_list,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["content-type", "authorization"],
+        expose_headers=["x-request-id"],
     )
 
     app.add_middleware(BodySizeLimit, limit=MAX_REQUEST_BYTES)
@@ -300,6 +298,8 @@ def create_app(services: Services | None = None) -> FastAPI:
         if request.method in ("POST", "PUT", "DELETE") and not _same_origin(request, state.settings.cors_origin_list):
             return JSONResponse({"detail": "cross-site request refused"}, status_code=403)
         return await call_next(request)
+
+    app.add_middleware(RequestDiagnostics)
 
     def rate_limited(request: Request) -> None:
         client = request.client.host if request.client else "unknown"

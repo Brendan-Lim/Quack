@@ -127,6 +127,7 @@ export class AnalysisScheduler {
   }
 
   checkNow() {
+    if (this.disposed) return;
     // Pressing again while a check runs can't make it faster, and used to start the same
     // expensive reading over and over on the server.
     const newest = this.newest;
@@ -174,6 +175,7 @@ export class AnalysisScheduler {
   private mayStart(): boolean {
     const newest = this.newest;
     if (!newest) return true;
+    if (this.flights.some((flight) => flight.controller.signal.aborted)) return false;
     if (!this.deps.overlap) return false;
     if (this.flights.length >= MAX_IN_FLIGHT || newest.trigger !== "auto" || this.manualWaiting) return false;
     return this.deps.getVersion() > newest.capture.version;
@@ -203,7 +205,7 @@ export class AnalysisScheduler {
 
   private cancelInFlight() {
     const flights = this.flights;
-    this.flights = [];
+    this.manualWaiting = false;
     for (const flight of flights) {
       flight.controller.abort();
       flight.penUp?.();
@@ -239,6 +241,7 @@ export class AnalysisScheduler {
   }
 
   private async run(trigger: Trigger) {
+    if (this.disposed) return;
     const capture = this.deps.capture(trigger);
     if (!capture) {
       mark("check_skipped", undefined, { trigger, reason: "nothing_to_check" });
@@ -268,8 +271,14 @@ export class AnalysisScheduler {
     let answeredFor: Trigger | null = null;
     // Whether a newer check started while this one was under way. Its reply, or the newer one's, has the last word.
     const overtaken = () => this.flights.indexOf(flight) < this.flights.length - 1 || capture.version < this.delivered;
+    let onAbort: () => void = () => {};
     try {
-      const result = await this.deps.send(capture, trigger, controller.signal);
+      const aborted = new Promise<never>((_resolve, reject) => {
+        onAbort = () => reject(new DOMException("aborted", "AbortError"));
+        controller.signal.addEventListener("abort", onAbort, { once: true });
+      });
+      const result = await Promise.race([this.deps.send(capture, trigger, controller.signal), aborted]);
+      if (controller.signal.aborted) throw new DOMException("aborted", "AbortError");
       // The stroke under way isn't in the notebook yet, and could be this mistake's correction.
       // Pen-up comes just before the stroke is added, and this carries on after that.
       if (this.drawing) await new Promise<void>((resolve) => (flight.penUp = resolve));
@@ -331,6 +340,7 @@ export class AnalysisScheduler {
       if (this.flights.length > 1 && (timedOut || !controller.signal.aborted)) this.deps.onBusyChange(true);
     } finally {
       clearTimeout(watchdog);
+      controller.signal.removeEventListener("abort", onAbort);
       const index = this.flights.indexOf(flight);
       if (index >= 0) this.flights.splice(index, 1);
       // Busy until the last check under way has finished, and said once. After a cancel, the list is already empty.

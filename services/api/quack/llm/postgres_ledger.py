@@ -11,7 +11,7 @@ import math
 import time
 import uuid
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import asdict
 from decimal import Decimal
@@ -20,7 +20,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from quack.db.database import Database
-from quack.llm.ledger import BudgetExceeded, Ledger, UsageRecord
+from quack.llm.ledger import BudgetExceeded, Ledger, UsageRecord, _nonnegative, _validated
 
 _active_debit: ContextVar[str | None] = ContextVar("quack_model_debit", default=None)
 _LOCK_ID = 743_812_095
@@ -36,8 +36,8 @@ class PostgresLedger(Ledger):
         if not url:
             raise ValueError("PostgreSQL accounting requires QUACK_DATABASE_URL")
         for limit in (project_limit, session_limit, request_limit, hourly_limit):
-            if limit is not None and (not math.isfinite(limit) or limit < 0):
-                raise ValueError("model budgets must be finite and nonnegative")
+            if limit is not None:
+                _nonnegative(limit)
         self.path = None
         self.project_limit = project_limit
         self.session_limit = session_limit
@@ -124,9 +124,22 @@ class PostgresLedger(Ledger):
     def check(self, session_id: str, worst_case_usd: float) -> None:
         self._allocate(session_id, worst_case_usd, debit=False)
 
+    def reserve_operation(self, session_id: str, worst_case_usd: float) -> AbstractContextManager[None]:
+        """Keep the production operation's complete retry allowance durably prepaid."""
+        return self.reserve(session_id, worst_case_usd)
+
+    def reserve_attempt(self, session_id: str, worst_case_usd: float) -> AbstractContextManager[None]:
+        # Each attempt is already covered by the surrounding durable operation debit.
+        if _active_debit.get() is None or not self._healthy:
+            raise BudgetExceeded("ledger", 0, self.project_limit)
+        _nonnegative(worst_case_usd)
+        return nullcontext()
+
     @contextmanager
     def reserve(self, session_id: str, worst_case_usd: float) -> Iterator[None]:
         from quack.llm.router import MAX_ATTEMPTS
+
+        _nonnegative(worst_case_usd)
 
         # The existing router can retry an operation. Prepay its complete retry
         # allowance. Voice has no retry but uses the same conservative bound.
@@ -162,6 +175,11 @@ class PostgresLedger(Ledger):
 
     def record(self, record: UsageRecord) -> None:
         debit_id = _active_debit.get()
+        try:
+            _validated(asdict(record))
+        except ValueError as exc:
+            self._healthy = False
+            raise BudgetExceeded("ledger", 0, self.project_limit) from exc
         if debit_id is None or not math.isfinite(record.estimated_usd) or record.estimated_usd < 0:
             raise BudgetExceeded("ledger", 0, self.project_limit)
         try:

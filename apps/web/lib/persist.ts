@@ -21,18 +21,47 @@ function db(): UseStore {
   return store;
 }
 
+const object = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
+const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const bounds = (value: unknown): value is Bounds => object(value) &&
+  finite(value.minX) && finite(value.minY) && finite(value.maxX) && finite(value.maxY) &&
+  value.minX <= value.maxX && value.minY <= value.maxY;
+
+// IndexedDB is an input boundary too: old app versions, failed imports and extensions can leave
+// malformed values. A failed validation must preserve the stored value for recovery.
+export function isSavedNotebook(value: unknown): value is SavedNotebook {
+  if (!object(value) || !Number.isSafeInteger(value.version) || (value.version as number) < 0 || !Array.isArray(value.strokes)) return false;
+  const ids = new Set<string>();
+  for (const stroke of value.strokes) {
+    if (!object(stroke) || typeof stroke.id !== "string" || !stroke.id || ids.has(stroke.id) ||
+      typeof stroke.color !== "string" || !finite(stroke.width) || stroke.width < 0 || !finite(stroke.createdAt) ||
+      !Array.isArray(stroke.points) || !stroke.points.length) return false;
+    ids.add(stroke.id);
+    for (const point of stroke.points) {
+      if (!object(point) || !finite(point.x) || !finite(point.y) || !finite(point.timestamp) ||
+        (point.pressure !== undefined && (!finite(point.pressure) || point.pressure < 0 || point.pressure > 1))) return false;
+    }
+  }
+  if (value.dirty !== undefined && (!Array.isArray(value.dirty) || !value.dirty.every(bounds))) return false;
+  if (value.seen !== undefined && (!object(value.seen) || !Object.values(value.seen).every((item) =>
+    object(item) && typeof item.dismissed === "boolean" && (item.area === null || bounds(item.area))))) return false;
+  return true;
+}
+
 // Failing to read is not the same as having nothing saved. Treating it as empty would let the
 // next stroke overwrite a student's notes.
 export async function loadNotebook(key: string = KEY): Promise<LoadResult> {
   try {
-    const saved = await get<SavedNotebook>(key, db());
-    return saved ? { status: "found", saved } : { status: "empty" };
+    const saved = await get<unknown>(key, db());
+    if (saved === undefined) return { status: "empty" };
+    return isSavedNotebook(saved) ? { status: "found", saved } : { status: "failed" };
   } catch {
     return { status: "failed" };
   }
 }
 
 export async function saveNotebook(saved: SavedNotebook): Promise<boolean> {
+  if (!isSavedNotebook(saved)) return false;
   try {
     await set(KEY, saved, db());
     return true;
@@ -45,12 +74,13 @@ export async function saveNotebook(saved: SavedNotebook): Promise<boolean> {
 // other tab's work. So the write only goes ahead if the save is still the version we last knew,
 // checked in one transaction so that nothing can slip in between. `known` is null if there was none.
 export async function writeNotebook(saved: SavedNotebook, known: number | null, key: string = KEY): Promise<WriteOutcome> {
+  if (!isSavedNotebook(saved) || (known !== null && (!Number.isSafeInteger(known) || known < 0 || saved.version < known))) return "failed";
   let conflict = false;
   try {
     await update<SavedNotebook>(
       key,
       (current) => {
-        conflict = current !== undefined && current.version !== known;
+        conflict = current === undefined ? known !== null : !isSavedNotebook(current) || current.version !== known;
         return conflict ? current! : saved;
       },
       db(),

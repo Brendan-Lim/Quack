@@ -19,6 +19,7 @@ PUBLIC_DOCS = {
     "docs/ARCHITECTURE.md",
     "docs/SETUP.md",
     "docs/TESTING.md",
+    "docs/RELEASE_SAFETY.md",
     "docs/PUBLICATION.md",
     "docs/CREDITS.md",
     "docs/hackathon/JUDGE_GUIDE.md",

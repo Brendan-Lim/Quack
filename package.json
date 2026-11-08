@@ -1,0 +1,8 @@
+{
+  "name": "quack",
+  "private": true,
+  "scripts": {
+    "verify": "python3 scripts/verify.py",
+    "verify:release": "python3 scripts/verify.py --build --browser"
+  }
+}

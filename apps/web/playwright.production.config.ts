@@ -7,9 +7,11 @@ const port = 3200 + Number(process.env.QUACK_E2E_PORT_SHIFT ?? 0);
 export default defineConfig({
   testDir: "tests/production",
   workers: 1,
+  forbidOnly: true,
   retries: 0,
-  reporter: "list",
-  use: { ...devices["Desktop Chrome"], baseURL: `http://127.0.0.1:${port}` },
+  outputDir: "test-results/production",
+  reporter: [["list"], ["json", { outputFile: "test-results/production-results.json" }]],
+  use: { ...devices["Desktop Chrome"], baseURL: `http://127.0.0.1:${port}`, trace: "retain-on-failure", screenshot: "only-on-failure" },
   webServer: {
     command: `npx next start --port ${port} --hostname 127.0.0.1`,
     url: `http://127.0.0.1:${port}`,

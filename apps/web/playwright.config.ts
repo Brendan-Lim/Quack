@@ -14,9 +14,11 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   workers: 1, // the fake Meta server holds one script at a time
   fullyParallel: false,
+  forbidOnly: true,
   retries: 0,
+  outputDir: "test-results/journeys",
   reporter: [["list"], ["json", { outputFile: "test-results/results.json" }]],
-  use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
+  use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 }, trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: [
     // The notebook on its own, as it was before accounts, which is what proves that path hasn't moved.
     { name: "notebook", testIgnore: /(accounts|learning|lessons)\.spec/, use: { baseURL: `http://127.0.0.1:${port(3100)}` } },

@@ -4,3 +4,4 @@ pytest-asyncio>=0.24,<2
 respx>=0.21,<1
 ruff>=0.6,<1
 mypy>=1.11,<2
+-r requirements-deploy.txt

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import random
 from fractions import Fraction
+from functools import partial
 from typing import Any
 
 from quack.services.lesson_questions import (
@@ -29,6 +30,7 @@ from quack.services.lesson_questions import (
     TOPIC_OF_SKILL,
     LessonQuestion,
     Template,
+    Tier,
     _lesson,
     _pick,
 )
@@ -245,7 +247,7 @@ def _proper(rng: random.Random, fixed: dict[str, Any] | None, largest: int) -> t
             return top, bottom
 
 
-def _simplify(template: str, tier: str, factors: tuple[int, int]):  # type: ignore[no-untyped-def]
+def _simplify(template: str, tier: Tier, factors: tuple[int, int]):  # type: ignore[no-untyped-def]
     def build(rng: random.Random, fixed: dict[str, Any] | None) -> LessonQuestion:
         top, bottom = (fixed["p"], fixed["q"]) if fixed and "p" in fixed else _proper(rng, fixed, 7)
         k = _pick(rng, fixed, "k", lambda: rng.randint(*factors))
@@ -340,7 +342,7 @@ _DECIMAL_BOTTOMS = (2, 4, 5, 10, 20, 25)
 def _to_decimal(rng: random.Random, fixed: dict[str, Any] | None) -> LessonQuestion:
     while True:
         bottom = _pick(rng, fixed, "q", lambda: rng.choice(_DECIMAL_BOTTOMS))
-        top = _pick(rng, fixed, "p", lambda bottom=bottom: rng.randint(1, bottom - 1))
+        top = _pick(rng, fixed, "p", partial(rng.randint, 1, bottom - 1))
         if Fraction(top, bottom).denominator == bottom:
             break
         fixed = None
@@ -361,7 +363,7 @@ def _to_decimal(rng: random.Random, fixed: dict[str, Any] | None) -> LessonQuest
 def _to_fraction(rng: random.Random, fixed: dict[str, Any] | None) -> LessonQuestion:
     while True:
         bottom = _pick(rng, fixed, "q", lambda: rng.choice((4, 5, 20, 25)))
-        top = _pick(rng, fixed, "p", lambda bottom=bottom: rng.randint(1, bottom - 1))
+        top = _pick(rng, fixed, "p", partial(rng.randint, 1, bottom - 1))
         if Fraction(top, bottom).denominator == bottom:
             break
         fixed = None
@@ -518,7 +520,7 @@ def _odd_triangle_area(rng: random.Random, fixed: dict[str, Any] | None) -> Less
 _RATIO_SIDES = {"sin": ("opposite", "hypotenuse"), "cos": ("adjacent", "hypotenuse"), "tan": ("opposite", "adjacent")}
 
 
-def _ratio(template: str, tier: str, ratios: tuple[str, ...]):  # type: ignore[no-untyped-def]
+def _ratio(template: str, tier: Tier, ratios: tuple[str, ...]):  # type: ignore[no-untyped-def]
     def build(rng: random.Random, fixed: dict[str, Any] | None) -> LessonQuestion:
         opposite, adjacent, hypotenuse = _pick(rng, fixed, "triple", lambda: rng.choice(_TRIPLES))
         ratio = _pick(rng, fixed, "ratio", lambda: rng.choice(ratios))

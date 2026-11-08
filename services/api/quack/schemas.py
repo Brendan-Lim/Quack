@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 AnalysisStatus = Literal["no_error", "confirmed_error", "uncertain", "unsupported"]
@@ -209,6 +209,27 @@ class AnalyzeResponse(ApiModel):
     clarification: Clarification | None = None
     # Right as far as it goes, and with something asked for still to add: "missing_constant".
     reminder: str | None = None
+
+    @model_validator(mode="after")
+    def enforce_alert_evidence(self) -> Self:
+        """Refuse internally inconsistent alerts before they can reach a student's notebook.
+
+        These checks run under python -O too; release safety cannot depend on assert statements.
+        The verifier remains the only source of the `verified` evidence itself.
+        """
+
+        ids = {mistake.id for mistake in self.mistakes}
+        if len(ids) != len(self.mistakes) or not all(mistake.verified for mistake in self.mistakes):
+            raise ValueError("mistakes must have unique ids and verified evidence")
+        if self.mistake is not None and (self.mistake not in self.mistakes or not self.mistake.verified):
+            raise ValueError("selected mistake must belong to the verified mistakes")
+        if ids.intersection(self.resolved_mistake_ids):
+            raise ValueError("a mistake cannot be present and resolved in the same response")
+        if self.intervention.should_quack and (
+            self.status != "confirmed_error" or self.stale or not any(mistake.is_new for mistake in self.mistakes)
+        ):
+            raise ValueError("an alert needs a current, new, verified mistake")
+        return self
 
 
 class ClearRequest(ApiModel):
