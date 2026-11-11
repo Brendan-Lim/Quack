@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -55,6 +56,25 @@ def test_seeded_fixtures_cover_all_families_and_difficulty(difficulty: str) -> N
         expected_degrees = (1,) if difficulty == "basic" else (2, 3)
         assert sp.degree(inner, x) in expected_degrees
     assert families == {sp.sin, sp.cos, sp.exp}
+
+
+def test_all_generated_questions_and_answers_have_drawable_synthetic_glyphs() -> None:
+    """The browser draws from this same alphabet; exp must work whichever question is chosen."""
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "evals"))
+    from synthetic.render import GLYPHS, render
+
+    for difficulty, count in (("basic", 9), ("intermediate", 18)):
+        questions = {
+            question.math: question
+            for question in (generate_question("chain_rule", difficulty, random.Random(seed)) for seed in range(1000))
+        }
+        assert len(questions) == count
+        for question in questions.values():
+            text = f"{question.math} = {question.expected}"
+            assert not set(text) - set(GLYPHS) - {" ", "^"}, text
+            rendered = render([{"text": text}])
+            assert rendered.getextrema()[0][0] < 255  # It drew ink, rather than a blank fixture.
 
 
 def test_uncertain_practice_does_not_finish_or_penalise(accounts_client: TestClient, model: Model) -> None:  # noqa: F811
