@@ -50,6 +50,45 @@ test.beforeEach(async () => {
 });
 
 test.describe("the journeys", () => {
+  test("chain-rule correction leads to verified follow-up practice", async ({ page }) => {
+    test.setTimeout(180_000);
+    await signUp(page);
+    await script({ reading: reading(first("d/dx(sin(x^2)) = cos(x^2)")) });
+    await write(page, "d/dx(sin(x^2)) = cos(x^2)", 80, 80, 24);
+    await expectDuck(page, "alert");
+    await duck(page).click();
+    await expect(page.getByTestId("hint-panel")).toContainText("function inside another");
+    await expect(page.getByTestId("hint-panel")).not.toContainText("2x");
+    await script({ reading: reading(first("d/dx(sin(x^2)) = cos(x^2)"), first("d/dx(sin(x^2)) = 2x*cos(x^2)")) });
+    await write(page, "d/dx(sin(x^2)) = 2x*cos(x^2)", 80, 160, 24);
+    await expect(bubble(page)).toHaveText("That's it.");
+    await settle(page, 500);
+    await openMenu(page, "menu-mistakes");
+    await entries(page).click();
+    await expect(page.getByTestId("mistake-practise")).toBeVisible();
+    await page.getByTestId("mistakes-close").click();
+    await page.getByTestId("finish-session").click();
+    await expect(page.getByTestId("recommendation")).toContainText("Chain rule");
+    await page.getByTestId("practice-this").click();
+    const prompt = page.getByTestId("practice-prompt");
+    await expect(prompt).toContainText("d/dx(");
+    const match = (await prompt.innerText()).match(/d\/dx\((sin|cos|exp)\((\d+)x\)\)/);
+    expect(match).not.toBeNull();
+    const [, family, scale] = match!;
+    const outer = family === "sin" ? `cos(${scale}x)` : family === "cos" ? `-sin(${scale}x)` : `exp(${scale}x)`;
+    const answer = `${scale}*(${outer})`;
+    await script({ reading: reading(first("0")) });
+    await write(page, "0", 80, 80);
+    await expect(page.getByTestId("practice").getByTestId("bubble")).toContainText("Quack!");
+    await script({ reading: reading(first(answer)) });
+    await page.getByTestId("practice-clear").click();
+    await write(page, answer, 80, 80, 24);
+    await expect(page.getByTestId("practice-correct")).toBeVisible();
+    await page.getByTestId("practice-end").click();
+    await expect(page.getByTestId("summary-correct")).toHaveText("1");
+    await expect(page.getByTestId("summary-message")).toContainText("One question doesn't say much");
+  });
+
   test("A: simplifying, a hint, a correction, My Mistakes, a recap, and practice", async ({ page }) => {
     test.setTimeout(180_000);
     await signUp(page);

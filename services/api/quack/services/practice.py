@@ -31,6 +31,7 @@ SUPPORTED: tuple[PracticeTopic, ...] = (
     "power_rule",
     "sum_and_constant_rules",
     "integration",
+    "chain_rule",
 )
 _SUPERSCRIPTS = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
 _SUBSCRIPTS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
@@ -198,6 +199,25 @@ def _sum_rules(rng: random.Random, difficulty: str) -> Question:
     )
 
 
+def _chain_rule(rng: random.Random, difficulty: str) -> Question:
+    """An outside function and a nontrivial inside derivative, with an explicit answer key.
+
+    Basic questions use ax; intermediate ones use ax^n. Avoid numerical angle offsets:
+    the existing verifier deliberately abstains when their units are unclear. Symbolic
+    work and answer completion must approve the key before the question can be shown.
+    """
+
+    power = 1 if difficulty == "basic" else rng.randint(2, 3)
+    scale = rng.randint(2, 4)
+    inner = _polynomial({power: scale})
+    rate = _polynomial({power - 1: scale * power})
+    family = rng.choice(("sin", "cos", "exp"))
+    expression = f"{family}({inner})"
+    outside = {"sin": f"cos({inner})", "cos": f"-sin({inner})", "exp": f"exp({inner})"}[family]
+    expected = f"({rate})*({outside})"
+    return _question("chain_rule", difficulty, f"d/dx({expression})", expected, "differentiation")
+
+
 _TEMPLATES = {
     "addition_subtraction": _adding,
     "solving_equations": _equations,
@@ -208,6 +228,7 @@ _TEMPLATES = {
     "combining_like_terms": _like_terms,
     "power_rule": _power_rule,
     "sum_and_constant_rules": _sum_rules,
+    "chain_rule": _chain_rule,
 }
 
 

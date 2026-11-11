@@ -493,7 +493,7 @@ class SessionHistory(ApiModel):
 
 PracticeTopic = Literal[
     "addition_subtraction", "multiplication", "division", "expanding_brackets", "combining_like_terms",
-    "solving_equations", "power_rule", "sum_and_constant_rules", "integration",
+    "solving_equations", "power_rule", "sum_and_constant_rules", "integration", "chain_rule",
 ]
 PracticeOutcome = Literal["in_progress", "incorrect", "correct"]
 

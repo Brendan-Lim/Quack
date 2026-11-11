@@ -250,7 +250,7 @@ export type SessionHistory = { sessions: SessionHistoryItem[] };
 
 // Practice. Nothing but PracticeReveal carries the answer.
 
-export type PracticeTopic = "addition_subtraction" | "multiplication" | "division" | "expanding_brackets" | "combining_like_terms" | "solving_equations" | "power_rule" | "sum_and_constant_rules" | "integration";
+export type PracticeTopic = "addition_subtraction" | "multiplication" | "division" | "expanding_brackets" | "combining_like_terms" | "solving_equations" | "power_rule" | "sum_and_constant_rules" | "integration" | "chain_rule";
 export type PracticeOutcome = "in_progress" | "incorrect" | "correct";
 
 export type PracticeProblem = {

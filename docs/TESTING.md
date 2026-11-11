@@ -43,6 +43,32 @@ This starts `next start` and verifies that `/collect` returns HTTP 404, `?debug`
 
 Synthetic fixtures under `evals/synthetic/` and `evals/dataset/synthetic/` support these tests. Evaluation source also supports methods tests, including calibration metrics. Generated results and collected handwriting belong outside the approved public file set.
 
+### Offline tutoring episodes
+
+From the repository root, using the backend development environment:
+
+```bash
+services/api/.venv/bin/python evals/tutoring.py --output /tmp/quack-tutoring.json
+# Run the same evaluator against the earlier source version first to capture a baseline.
+services/api/.venv/bin/python evals/tutoring.py --output /tmp/quack-after.json --baseline /tmp/quack-before.json
+```
+
+This reuses the existing HTTP test doubles with the real parser, isolated verifier, account-owned
+state, hints, corrections, recap and practice routes. Four chain-rule episodes and a power-rule
+control cover detection through follow-up practice. Five guard cases cover ambiguous readings,
+disagreement, malformed output, timeout and zero budget. Results contain synthetic case IDs,
+contract checks, synthetic practice questions and mock call counts. Shell model/database settings
+are removed and unregistered HTTP calls are refused. No key or real model credits are used.
+The comparison rejects changed fixtures, changed evaluator code and missing checks; a failed
+episode returns a nonzero exit status. These episodes also run in ordinary backend regression tests.
+
+Chain-rule practice now follows a verified missing-factor pattern from My Mistakes or a recap.
+It uses small sine, cosine and exponential questions with linear or power inner functions;
+all keys are verified before display. Numerical angle offsets and powers of brackets are outside
+this initial question bank. Existing uncertainty, completion and budget rules still apply.
+The evaluator checks deterministic contracts and hint spoiler/fidelity filters. Human hint review,
+real recognition accuracy, learning gains and production latency/cost require separate evidence.
+
 ## What the tests establish
 
 Synthetic ink and scripted readings can verify mathematics, state transitions and UI flow. They do not establish physical Apple Pencil behaviour, real handwriting accuracy or learning outcomes. Supabase stand-ins do not establish correct configuration of a hosted Auth project. Two model readings can agree on a misrecognition.
