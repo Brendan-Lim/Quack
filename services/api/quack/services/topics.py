@@ -40,7 +40,7 @@ TOPICS = {
         Topic("power_rule", "Power rule", CALCULUS, "power_rule"),
         Topic("sum_and_constant_rules", "Sum and constant rules", CALCULUS, "sum_and_constant_rules"),
         Topic("standard_derivatives", "Derivatives of sin, cos and other functions", CALCULUS),
-        Topic("chain_rule", "Chain rule", CALCULUS),
+        Topic("chain_rule", "Chain rule", CALCULUS, "chain_rule"),
         Topic("product_rule", "Product rule", CALCULUS),
         Topic("quotient_rule", "Quotient rule", CALCULUS),
         Topic("integration", "Integration", CALCULUS, "integration"),

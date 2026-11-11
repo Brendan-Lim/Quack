@@ -55,6 +55,13 @@ Generated answer keys are verified before questions are shown. `learning.py` val
 
 Independent completion earns one credit and assisted completion earns half. Distinct question types and skills contribute to mastery. Saved progress, My Mistakes and recaps support returning learners.
 
+Standalone practice also supports chain-rule follow-ups from verified notebook mistakes. Explicit
+integer-derived keys for sine, cosine and exponential compositions pass the existing bounded
+verification/completion gate before display. Basic questions have a linear inner function;
+intermediate ones have a power. This adds no model call during question generation and no new
+mastery rule. A missing-factor pattern supports a useful hint without establishing the student's
+mental cause. The offline episode scorecard in `evals/tutoring.py` exercises this flow and its guards.
+
 ## Accounts and storage
 
 Notes remain in the browser's IndexedDB, keyed by account. Calibration samples, study sessions, mistake facts, learning events and progression are stored server-side, using SQLite locally or PostgreSQL through Psycopg. Notebook notes do not synchronise across devices; account learning records can.

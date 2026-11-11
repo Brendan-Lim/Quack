@@ -43,6 +43,10 @@ def wrong_answer(expected: str) -> str:
 
     if expected.startswith("x ="):
         return f"x = {int(expected[3:]) + 1}"
+    if any(function in expected for function in ("sin(", "cos(", "exp(")):
+        # A constant offset can disappear relative to a large exponential at sample points.
+        # A scaling error stays distinct; the verifier's conservative comparison is unchanged.
+        return f"2*({expected})"
     return f"{expected} + x" if "C" in expected else f"{expected} + 1"
 
 
@@ -324,7 +328,7 @@ class TestIsolation:
         assert accounts_client.post("/api/practice/sessions", json={"topic": "division"}).status_code == 401
 
     def test_unsupported_topics_are_refused(self, accounts_client: TestClient) -> None:
-        response = accounts_client.post("/api/practice/sessions", json={"topic": "chain_rule"}, headers=register(accounts_client))
+        response = accounts_client.post("/api/practice/sessions", json={"topic": "product_rule"}, headers=register(accounts_client))
         assert response.status_code == 422
 
 

@@ -17,7 +17,7 @@ import random
 from dataclasses import dataclass
 
 from quack.services.adaptive import Attempt, choose_next, normal_progression
-from quack.services.curriculum import load_all
+from quack.services.curriculum import course
 from quack.services.lesson_questions import TEMPLATES, build
 from quack.services.math_verifier import LineInput, verify_lines
 from quack.services.misconceptions import TAXONOMY, classify
@@ -59,8 +59,9 @@ CASES = (
 
 
 def run_case(case: Case) -> dict[str, str]:
-    course = load_all()[0]
-    level = course.level(case.level)
+    algebra = course("algebra_foundations")
+    assert algebra is not None
+    level = algebra.level(case.level)
     assert level is not None
     template, params = case.asked or (level.opener.template, dict(level.opener.params))  # type: ignore[union-attr]
     question = build(template, random.Random(0), dict(params))
