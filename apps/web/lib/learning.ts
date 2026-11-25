@@ -4,7 +4,7 @@
 // connection at any moment, and nothing can be left to the page being told it's closing. Each has an
 // id from when it happened, so sending it again after a lost reply changes nothing.
 
-import { sendJson } from "./api";
+import { sendProgressJson } from "./api";
 import { randomId } from "./persist";
 import type { AnalyzeResponse, ClientEventType, LearningEventIn, LearningEventResult } from "./types";
 
@@ -41,7 +41,7 @@ export function eventsFrom(result: AnalyzeResponse, replaced: Record<string, str
 
 type Send = (events: LearningEventIn[]) => Promise<LearningEventResult>;
 
-const sendToServer: Send = (events) => sendJson("POST", "/api/learning/events", { events });
+const sendToServer: Send = (events) => sendProgressJson("/api/learning/events", { events });
 
 export class LearningQueue implements LearningSink {
   private queue: LearningEventIn[];

@@ -1,6 +1,6 @@
 // The account's side of the API, and what's kept on this device so it opens without a connection.
 
-import { sendJson } from "./api";
+import { sendJson, sendProgressJson } from "./api";
 import type {
   CalibrationExport,
   CalibrationState,
@@ -33,8 +33,8 @@ export const restartCalibration = () => sendJson<CalibrationState>("POST", "/api
 export const deleteLearning = () => sendJson<{ deleted: boolean }>("DELETE", "/api/account/learning");
 export const deleteAccount = () => sendJson<DeleteAccountResult>("DELETE", "/api/account");
 
-export const currentSession = () => sendJson<CurrentSession>("POST", "/api/sessions/current");
-export const finishSession = (id: string) => sendJson<Recap>("POST", `/api/sessions/${id}/finish`);
+export const currentSession = () => sendProgressJson<CurrentSession>("/api/sessions/current");
+export const finishSession = (id: string) => sendProgressJson<Recap>(`/api/sessions/${id}/finish`);
 export const fetchHistory = () => sendJson<SessionHistory>("GET", "/api/sessions");
 export const fetchRecap = (id: string) => sendJson<RecapDetail>("GET", `/api/sessions/${id}/recap`);
 

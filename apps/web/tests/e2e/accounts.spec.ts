@@ -385,14 +385,24 @@ test.describe("recaps", () => {
       await route.continue();
     });
     let failUpload = true;
+    let committedCorrection = false;
     const correctionUploads: { id: string; sessionId: string }[] = [];
     await page.route("**/api/learning/events", async (route) => {
       const corrections = route.request().postDataJSON().events.filter(
         (event: { eventType: string }) => event.eventType === "correction_verified",
       );
       correctionUploads.push(...corrections);
-      if (failUpload && corrections.length) await route.abort();
-      else await route.continue();
+      if (failUpload && corrections.length) {
+        if (!committedCorrection) {
+          const response = await route.fetch();
+          expect(response.ok()).toBe(true);
+          expect((await response.json()).refused).toEqual([]);
+          committedCorrection = true;
+        }
+        await route.abort();
+      } else {
+        await route.continue();
+      }
     });
 
     await script({ reading: reading(first("2 * 3 = 5"), first("2 * 3 = 6")) });
@@ -408,6 +418,7 @@ test.describe("recaps", () => {
     await expect(page.getByTestId("home-problem")).toContainText("Try Finish session again");
     await expect(page.getByTestId("recap")).toHaveCount(0);
     expect(correctionUploads.length).toBeGreaterThan(0);
+    expect(committedCorrection).toBe(true);
     expect(finishCount).toBe(0);
 
     failUpload = false;
@@ -422,6 +433,67 @@ test.describe("recaps", () => {
     expect(recap.sessionId).toBe(original);
     expect(recap.glance.corrected).toBe(1);
     expect(finishCount).toBe(1);
+  });
+
+  test("a stalled upload releases the notebook and retries the same event", async ({ page }) => {
+    test.setTimeout(60_000);
+    await signUpAndCalibrate(page);
+    await script({ reading: reading(first("2 * 3 = 5")) });
+    let releaseUpload!: () => void;
+    const held = new Promise<void>((resolve) => { releaseUpload = resolve; });
+    const sent: { id: string; sessionId: string }[] = [];
+    await page.route("**/api/learning/events", async (route) => {
+      sent.push(route.request().postDataJSON().events[0]);
+      if (sent.length === 1) {
+        await held;
+        await route.abort();
+      } else {
+        await route.continue();
+      }
+    });
+    await write(page, "2 * 3 = 5", 80, 80);
+    await expect.poll(() => sent.length).toBe(1);
+    const finishes: string[] = [];
+    page.on("request", (request) => {
+      if (/\/api\/sessions\/[^/]+\/finish$/.test(request.url())) finishes.push(request.url());
+    });
+    const finish = page.getByTestId("finish-session");
+    try {
+      await finish.click();
+      await expect(finish).toBeDisabled();
+      await expect(page.getByTestId("home-problem")).toContainText("Try Finish session again", { timeout: 12_000 });
+      await expect(finish).toBeEnabled();
+      expect(finishes).toEqual([]);
+    } finally {
+      releaseUpload();
+    }
+
+    await finish.click();
+    await expect(glance(page, "found")).toHaveText("1");
+    expect(sent).toHaveLength(2);
+    expect(sent[1]).toEqual(sent[0]);
+    expect(finishes).toHaveLength(1);
+    expect(finishes[0]).toContain(sent[0].sessionId);
+  });
+
+  test("a lost Finish reply retries the original session", async ({ page }) => {
+    await signUpAndCalibrate(page);
+    const attempts: string[] = [];
+    await page.route("**/api/sessions/*/finish", async (route) => {
+      attempts.push(route.request().url());
+      const response = await route.fetch();
+      expect(response.ok()).toBe(true);
+      if (attempts.length === 1) await route.abort();
+      else await route.fulfill({ response });
+    });
+
+    const finish = page.getByTestId("finish-session");
+    await finish.click();
+    await expect(page.getByTestId("home-problem")).toContainText("Try Finish session again");
+    await finish.click();
+    await expect(glance(page, "found")).toHaveText("0");
+    expect(attempts).toHaveLength(2);
+    expect(attempts[1]).toBe(attempts[0]);
   });
 
   test("a saved recap can be read with no connection", async ({ page }) => {

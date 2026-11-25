@@ -45,6 +45,24 @@ export async function sendJson<T>(method: "GET" | "POST" | "PUT" | "DELETE", pat
   return (await checked(path, response).json()) as T;
 }
 
+// Finishing can keep the notebook paused, so progress requests need a deadline
+// that also covers waiting for authentication or reading the response body.
+export async function sendProgressJson<T>(path: string, body?: unknown): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new RequestTimedOut());
+      controller.abort();
+    }, 8_000);
+  });
+  try {
+    return await Promise.race([sendJson<T>("POST", path, body, controller.signal), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function postJson<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   return sendJson("POST", path, body, signal);
 }

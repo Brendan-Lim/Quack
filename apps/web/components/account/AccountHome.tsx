@@ -66,6 +66,7 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
   const [menuOpen, setMenuOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const finishPending = useRef(false);
+  const finishingSession = useRef<string | null>(null);
   const notebook = useRef<NotebookHandle | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   // A lesson under way, to go back to in one tap. Only from the server, so never made up.
@@ -91,6 +92,7 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
           cacheRecap(user.id, wrapped);
           setWrappedUp(wrapped);
         }
+        return current.id;
       }),
     [user.id, session],
   );
@@ -115,20 +117,28 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
   }, [user.id, session, queue, startOrResume, backToNotebookSession, loadResume]);
 
   const finish = useCallback(async () => {
-    const id = session.get();
     const page = notebook.current;
-    if (finishPending.current || !id || !page) return;
+    if (finishPending.current || !page) return;
+    let id = finishingSession.current ?? session.get();
     finishPending.current = true;
     setFinishing(true);
     setProblem(null);
     try {
       await page.pauseChecks();
+      id ??= await startOrResume();
       await queue.drain();
+      // If the reply is lost, retry the same finish even if the current notebook session has changed.
+      finishingSession.current = id;
       const recap = await finishSession(id);
+      finishingSession.current = null;
+      if (session.get() === id) {
+        session.set(null);
+        localStorage.removeItem(sessionKey(user.id));
+      }
       cacheRecap(user.id, recap);
       setView({ name: "recap", recap, practice: [], from: "finish" });
-      // Whatever happens next belongs to a new session. The notes carry on as they were.
-      await startOrResume();
+      // The saved recap is available even when the next session cannot be loaded yet.
+      await startOrResume().catch(() => {});
     } catch {
       setProblem("Quack couldn't sync this session. Your notes and progress are safe. Try Finish session again.");
     } finally {
@@ -239,6 +249,7 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
 
   const close = () => {
     backToNotebookSession();
+    if (!session.get() && !finishPending.current) void startOrResume().catch(() => {});
     setView({ name: "notebook" });
     loadResume();
   };
