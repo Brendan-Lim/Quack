@@ -46,7 +46,8 @@ export const fetchMistakes = (sessionId?: string | null) =>
   sendJson<MistakeNotebook>("GET", `/api/mistakes${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`);
 export const fetchMistake = (id: string) => sendJson<MistakeEntryDetail>("GET", `/api/mistakes/${encodeURIComponent(id)}`);
 export const deleteMistake = (id: string) => sendJson<{ deleted: boolean }>("DELETE", `/api/mistakes/${encodeURIComponent(id)}`);
-export const nextProblem = (sessionId: string) => sendJson<PracticeProblem>("POST", `/api/practice/sessions/${sessionId}/next`);
+export const nextProblem = (sessionId: string, currentProblemId?: string) =>
+  sendJson<PracticeProblem>("POST", `/api/practice/sessions/${sessionId}/next`, { currentProblemId });
 export const finishPractice = (sessionId: string) => sendJson<PracticeSummary>("POST", `/api/practice/sessions/${sessionId}/finish`);
 export const revealAnswer = (problemId: string) => sendJson<PracticeReveal>("POST", `/api/practice/problems/${problemId}/reveal`);
 

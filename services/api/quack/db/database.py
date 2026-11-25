@@ -114,7 +114,7 @@ class Database:
         except psycopg.OperationalError:
             # The connection dropped, such as after the database restarted. One more try on a new one,
             # unless a transaction was under way, which has to be started again by its caller.
-            if self._connection.info.transaction_status != psycopg.pq.TransactionStatus.UNKNOWN:
+            if self._depth or self._connection.info.transaction_status != psycopg.pq.TransactionStatus.UNKNOWN:
                 raise
             self._connect()
             return self._connection.execute(converted, params)
@@ -139,8 +139,14 @@ class Database:
 
         with self._lock:
             if self.is_postgres:
-                with self._connection.transaction():
-                    yield
+                if not self._depth and self._connection.broken:
+                    self._connect()
+                self._depth += 1
+                try:
+                    with self._connection.transaction():
+                        yield
+                finally:
+                    self._depth -= 1
                 return
             # One transaction can use a method that has its own. The outermost one decides.
             if self._depth:

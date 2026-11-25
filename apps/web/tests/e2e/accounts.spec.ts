@@ -400,6 +400,49 @@ test.describe("practice", () => {
     for (const body of bodies) expect(body).not.toContain(`"${shown}"`);
   });
 
+  test("Next retries a lost response from the displayed practice question", async ({ page }) => {
+    await signUpAndCalibrate(page);
+    const started = page.waitForResponse((response) => response.url().endsWith("/api/practice/sessions"));
+    await page.getByTestId("account-menu").click();
+    await page.getByTestId("menu-practice").click();
+    const first = await (await started).json();
+    const prompt = page.getByTestId("practice-prompt");
+    await expect(prompt).toHaveText(first.prompt);
+
+    let releaseResponse!: () => void;
+    const holdResponse = new Promise<void>((resolve) => { releaseResponse = resolve; });
+    const predecessors: string[] = [];
+    let successor: { id: string; prompt: string } | undefined;
+    let replay: { id: string } | undefined;
+    await page.route("**/api/practice/sessions/*/next", async (route) => {
+      const body = route.request().postData();
+      predecessors.push(body ? route.request().postDataJSON().currentProblemId : "");
+      const response = await route.fetch();
+      if (predecessors.length === 1) {
+        successor = await response.json();
+        await holdResponse;
+        await route.abort();
+      } else {
+        replay = await response.json();
+        await route.fulfill({ response });
+      }
+    });
+    const next = page.getByTestId("practice-next");
+    try {
+      await next.click();
+      await expect.poll(() => successor?.id).toBeTruthy();
+      await expect(next).toBeDisabled({ timeout: 2000 });
+    } finally {
+      releaseResponse();
+    }
+    await expect(page.getByTestId("practice-next-problem")).toContainText("Try again");
+    await expect(prompt).toHaveText(first.prompt);
+    await next.click();
+    await expect(prompt).toHaveText(successor!.prompt);
+    expect(predecessors).toEqual([first.id, first.id]);
+    expect(replay?.id).toBe(successor?.id);
+  });
+
   test("a second question gets a new page", async ({ page }) => {
     await signUpAndCalibrate(page);
     await page.getByTestId("account-menu").click();

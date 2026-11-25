@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import random
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import httpx
@@ -12,6 +15,7 @@ import respx
 import sympy as sp
 from fastapi.testclient import TestClient
 
+from quack.services import practice as practice_service
 from quack.services.handwriting import HandwritingReading, ReadLine
 from quack.services.math_parser import parse_expression, parse_statement, to_sympy
 from quack.services.math_verifier import LineInput, completes_answer, verify_lines
@@ -310,6 +314,81 @@ class TestAnswerStaysHidden:
         practice.answer(model, practice.row["expected_answer"])
         accounts_client.post(f"/api/practice/problems/{practice.problem['id']}/reveal", headers=practice.headers)
         assert practice.summary()["correct"] == 1
+
+
+@pytest.mark.parametrize("simultaneous", [True, False], ids=["simultaneous", "lost-response"])
+def test_next_reuses_the_successor(
+    accounts_client: TestClient, monkeypatch: pytest.MonkeyPatch, simultaneous: bool,
+) -> None:
+    practice = Practice(accounts_client)
+    first = practice.problem["id"]
+    session_id = practice.problem["sessionId"]
+    user_id = accounts_client.get("/api/profile", headers=practice.headers).json()["userId"]
+    store = accounts_client.app.state.services.accounts.store
+    url = f"/api/practice/sessions/{session_id}/next"
+
+    def advance(after: str) -> dict[str, Any]:
+        response = accounts_client.post(url, json={"currentProblemId": after}, headers=practice.headers)
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    if simultaneous:
+        both_generating = threading.Barrier(2)
+        new_question = practice_service.new_question
+
+        async def overlap(*args: Any, **kwargs: Any) -> Any:
+            await asyncio.to_thread(both_generating.wait, 10)
+            return await new_question(*args, **kwargs)
+
+        with monkeypatch.context() as patch, ThreadPoolExecutor(max_workers=2) as executor:
+            patch.setattr(practice_service, "new_question", overlap)
+            first_request = executor.submit(advance, first)
+            retry = executor.submit(advance, first)
+            successor, replay = first_request.result(timeout=15), retry.result(timeout=15)
+    else:
+        advance(first)  # The browser never receives this response.
+        successor = advance(first)
+        replay = advance(first)
+
+    assert successor["id"] == replay["id"] != first
+    assert [row["id"] for row in store.problems_in(user_id, session_id)] == [first, successor["id"]]
+    events = store.session_events(user_id, session_id)
+    assert [event["problem_id"] for event in events if event["event_type"] == "practice_started"] == [
+        first, successor["id"],
+    ]
+
+    third = advance(successor["id"])
+    assert advance(first)["id"] == successor["id"]
+    assert [row["id"] for row in store.problems_in(user_id, session_id)] == [first, successor["id"], third["id"]]
+
+
+def test_next_rolls_back_if_the_start_event_fails(
+    accounts_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    practice = Practice(accounts_client)
+    first = practice.problem
+    session_id = first["sessionId"]
+    user_id = accounts_client.get("/api/profile", headers=practice.headers).json()["userId"]
+    store = accounts_client.app.state.services.accounts.store
+    url = f"/api/practice/sessions/{session_id}/next"
+    add_event = store.add_event
+
+    def fail_start(*args: Any, **kwargs: Any) -> bool:
+        if kwargs["event_type"] == "practice_started":
+            raise RuntimeError("simulated start event write failure")
+        return add_event(*args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(store, "add_event", fail_start)
+        assert accounts_client.post(url, headers=practice.headers).status_code == 500
+
+    assert [row["id"] for row in store.problems_in(user_id, session_id)] == [first["id"]]
+    assert [event["problem_id"] for event in store.session_events(user_id, session_id)] == [first["id"]]
+    # A bodyless caller can still skip the unanswered question.
+    response = accounts_client.post(url, headers=practice.headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["id"] != first["id"]
+    assert practice.row["status"] == "open"
 
 
 class TestIsolation:
