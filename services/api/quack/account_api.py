@@ -447,7 +447,8 @@ def build_account_router(
                 reason = accounts.learning.record(
                     identity.user_id,
                     ClientEvent(
-                        event.id, event.event_type, event.mistake_id, event.session_id, event.reason, event.rewritten
+                        event.id, event.event_type, event.mistake_id, event.session_id, event.reason, event.rewritten,
+                        event.lesson_evidence_id,
                     ),
                 )
                 if reason:

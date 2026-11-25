@@ -294,6 +294,9 @@ class UserStore:
             for row in sessions:
                 self._drop_from_recap(user_id, row["session_id"], steps)
             self.database.execute("DELETE FROM learning_events WHERE user_id = ? AND mistake_id = ?", (user_id, mistake_id))
+            self.database.execute(
+                "DELETE FROM lesson_check_evidence WHERE user_id = ? AND mistake_id = ?", (user_id, mistake_id)
+            )
             self.database.execute("DELETE FROM mistake_facts WHERE user_id = ? AND mistake_id = ?", (user_id, mistake_id))
             # A lesson question keeps what it counted for, with nothing left to say which mistake it was.
             for link in self.database.query(
@@ -428,33 +431,113 @@ class UserStore:
             (time.time(), problem_id, user_id),
         )
 
-    def mark_assisted(self, user_id: str, problem_id: str) -> None:
+    def mark_assisted(self, user_id: str, problem_id: str, requested_at: float | None = None) -> None:
+        origin = requested_at if requested_at is not None else time.time()
         self.database.execute(
-            "UPDATE practice_problems SET assisted = 1 WHERE id = ? AND user_id = ?", (problem_id, user_id)
+            "UPDATE practice_problems SET assisted_at = CASE WHEN assisted = 0 OR assisted_at > ? "
+            "THEN ? ELSE assisted_at END, "
+            "assisted = 1 WHERE id = ? AND user_id = ?",
+            (origin, origin, problem_id, user_id),
         )
 
     def link_problem_mistake(
-        self, user_id: str, problem_id: str, mistake_id: str, misconception: str, confidence: str, evidence: str
+        self, user_id: str, problem_id: str, mistake_id: str, misconception: str, confidence: str, evidence: str,
+        attempt_started_at: float | None = None,
     ) -> bool:
-        """The first naming stands: the same mistake read again is the same mistake."""
+        """The first naming stands. Keep the earliest check's origin even if checks finish out of order."""
 
         return bool(
             self.database.execute(
                 "INSERT INTO problem_mistakes (user_id, problem_id, mistake_id, misconception, confidence, evidence, "
-                "created_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, problem_id, mistake_id) DO NOTHING",
-                (user_id, problem_id, mistake_id, misconception, confidence, evidence, time.time()),
+                "created_at, attempt_started_at, attempt_shown, attempt_misread) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0) "
+                "ON CONFLICT (user_id, problem_id, mistake_id) DO UPDATE SET attempt_started_at = CASE "
+                "WHEN excluded.attempt_started_at < COALESCE(problem_mistakes.attempt_started_at, "
+                "problem_mistakes.created_at) THEN excluded.attempt_started_at "
+                "ELSE problem_mistakes.attempt_started_at END",
+                (user_id, problem_id, mistake_id, misconception, confidence, evidence, time.time(),
+                 attempt_started_at if attempt_started_at is not None else time.time()),
             )
         )
 
     def flag_problem_mistake(
-        self, user_id: str, session_id: str, mistake_id: str, field: Literal["shown", "helped", "misread"], value: int
+        self, user_id: str, session_id: str, mistake_id: str, field: Literal["shown", "helped", "misread"], value: int,
+        occurred_at: float | None = None, problem_id: str | None = None,
     ) -> None:
         """What happened to a verified mistake on the questions of one lesson visit."""
 
-        self.database.execute(
-            f"UPDATE problem_mistakes SET {field} = ? WHERE user_id = ? AND mistake_id = ? AND problem_id IN "
-            "(SELECT id FROM practice_problems WHERE user_id = ? AND session_id = ?)",
-            (value, user_id, mistake_id, user_id, session_id),
+        params: list[Any] = []
+        timing = ""
+        origin = occurred_at if occurred_at is not None else time.time()
+        if field == "helped":
+            # NULL on an already-helped legacy link means its original timing is unknown. Keep it.
+            timing = "helped_at = CASE WHEN helped = 0 OR helped_at > ? THEN ? ELSE helped_at END, "
+            params.extend((origin, origin))
+        else:
+            # Snapshot legacy flags before changing the live feedback flags. A receipt lets original
+            # evidence arrive after completion, but later checks cannot rewrite the attempt's flags.
+            eligible = (
+                "problem_id IN (SELECT id FROM practice_problems WHERE user_id = ? "
+                "AND (status NOT IN ('correct', 'revealed') OR completed_at >= ?))"
+            )
+            eligible_params: list[Any] = [user_id, origin]
+            if occurred_at is None:
+                # Old queued events have no receipt. Only legacy links can contribute late this way.
+                eligible = f"({eligible} OR (attempt_started_at IS NULL AND problem_id IN "
+                eligible += "(SELECT id FROM practice_problems WHERE user_id = ? "
+                eligible += "AND completed_at >= problem_mistakes.created_at)))"
+                eligible_params.append(user_id)
+            timing = "attempt_shown = COALESCE(attempt_shown, shown), "
+            timing += "attempt_misread = COALESCE(attempt_misread, misread), "
+            if field == "shown":
+                timing = f"attempt_shown = CASE WHEN {eligible} THEN ? ELSE COALESCE(attempt_shown, shown) END, "
+                timing += "attempt_misread = COALESCE(attempt_misread, misread), "
+                params.extend((*eligible_params, value))
+            else:
+                timing = "attempt_shown = COALESCE(attempt_shown, shown), "
+                timing += f"attempt_misread = CASE WHEN {eligible} "
+                timing += "AND (attempt_event_at IS NULL OR attempt_event_at <= ?) THEN ? "
+                timing += "ELSE COALESCE(attempt_misread, misread) END, "
+                timing += f"attempt_event_at = CASE WHEN {eligible} "
+                timing += "AND (attempt_event_at IS NULL OR attempt_event_at <= ?) THEN ? ELSE attempt_event_at END, "
+                params.extend((*eligible_params, origin, value, *eligible_params, origin, origin))
+        scope = " AND problem_id = ?" if problem_id is not None else ""
+        with self.database.transaction():
+            if self.database.is_postgres and field != "helped":
+                # Completion updates the problem row. Wait for it before deciding which flags belong
+                # to the attempt, even when the check and event are served by different processes.
+                self.database.query(
+                    "SELECT id FROM practice_problems WHERE user_id = ? AND session_id = ? "
+                    + ("AND id = ? " if problem_id else "") + "ORDER BY id FOR UPDATE",
+                    (user_id, session_id, *([problem_id] if problem_id else [])),
+                )
+            self.database.execute(
+                f"UPDATE problem_mistakes SET {timing}{field} = ? WHERE user_id = ? AND mistake_id = ? AND problem_id IN "
+                f"(SELECT id FROM practice_problems WHERE user_id = ? AND session_id = ?){scope}",
+                (*params, value, user_id, mistake_id, user_id, session_id, *([problem_id] if problem_id else [])),
+            )
+
+    def record_lesson_evidence(
+        self, user_id: str, problem_id: str, evidence_id: str, started_at: float,
+        detected: list[str], resolved: list[str],
+    ) -> None:
+        with self.database.transaction():
+            for kind, mistakes in (("detected", detected), ("resolved", resolved)):
+                for mistake_id in mistakes:
+                    self.database.execute(
+                        "INSERT INTO lesson_check_evidence "
+                        "(user_id, evidence_id, problem_id, mistake_id, kind, started_at) VALUES (?, ?, ?, ?, ?, ?) "
+                        "ON CONFLICT (user_id, evidence_id, mistake_id, kind) DO NOTHING",
+                        (user_id, evidence_id, problem_id, mistake_id, kind, started_at),
+                    )
+
+    def lesson_evidence(
+        self, user_id: str, session_id: str, mistake_id: str, evidence_id: str, kind: str,
+    ) -> dict[str, Any] | None:
+        return self.database.one(
+            "SELECT e.* FROM lesson_check_evidence e JOIN practice_problems p ON p.id = e.problem_id "
+            "AND p.user_id = e.user_id WHERE e.user_id = ? AND p.session_id = ? AND e.mistake_id = ? "
+            "AND e.evidence_id = ? AND e.kind = ?",
+            (user_id, session_id, mistake_id, evidence_id, kind),
         )
 
     def lock_session(self, user_id: str, session_id: str) -> None:
@@ -541,7 +624,7 @@ class UserStore:
         with self.database.transaction():
             for table in (
                 "learning_events", "practice_problems", "mistake_facts", "study_sessions", "problem_mistakes",
-                "level_progress",
+                "level_progress", "lesson_check_evidence",
             ):
                 self.database.execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))
 

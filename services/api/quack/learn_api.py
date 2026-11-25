@@ -8,6 +8,7 @@ question, a nudge, or to move on when the rules allow it, and that's all.
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -100,17 +101,19 @@ def build_learn_router(
 
     @router.post("/problems/{problem_id}/nudge")
     async def nudge(problem_id: str, body: NudgeRequest, identity: Identity = you) -> NudgeOut:
-        text, last = await run(lessons.nudge, store, identity.user_id, problem_id, body.level)
+        text, last = await run(lessons.nudge, store, identity.user_id, problem_id, body.level, time.time())
         return NudgeOut(level=body.level, text=text, last=last)
 
     @router.post("/problems/{problem_id}/assisted")
     async def assisted(problem_id: str, identity: Identity = you) -> dict[str, bool]:
-        """Help from somewhere Quack doesn't record by itself, such as circling. It can only lower credit."""
+        """Help from somewhere Quack doesn't record by itself, such as circling, during this attempt."""
+
+        requested_at = time.time()
 
         def mark() -> None:
             if store.problem(identity.user_id, problem_id) is None:
                 raise lessons.LessonRefused(404, "unknown problem")
-            store.mark_assisted(identity.user_id, problem_id)
+            store.mark_assisted(identity.user_id, problem_id, requested_at)
 
         await run(mark)
         return {"assisted": True}

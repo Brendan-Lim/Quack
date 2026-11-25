@@ -180,6 +180,8 @@ class Clarification(ApiModel):
 
 
 class AnalyzeResponse(ApiModel):
+    # Server receipt for lesson learning events, carried unchanged through the durable client queue.
+    lesson_evidence_id: str | None = None
     snapshot_version: int
     request_id: str | None = None
     status: AnalysisStatus
@@ -396,6 +398,7 @@ class LearningEventIn(ApiModel):
     session_id: str | None = Field(default=None, max_length=64)
     reason: InvalidatedReason | None = None
     rewritten: bool = False
+    lesson_evidence_id: str | None = Field(default=None, max_length=64)
 
 
 class LearningEventBatch(ApiModel):

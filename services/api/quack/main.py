@@ -7,6 +7,7 @@ import ipaddress
 import logging
 import sys
 import time
+import uuid
 from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -388,14 +389,18 @@ def create_app(services: Services | None = None) -> FastAPI:
             accounts.store.touch_session(user_id, study_session_id, checked=not response.model_issue)
 
     def note_help(
-        identity: Identity | None, study_session_id: str | None, mistake_id: str, kind: str, level: int, text: str
+        identity: Identity | None, study_session_id: str | None, mistake_id: str, kind: str, level: int, text: str,
+        requested_at: float,
     ) -> None:
         if identity and state.accounts:
-            state.accounts.learning.help_given(identity.user_id, study_session_id, mistake_id, kind, level, text)
+            state.accounts.learning.help_given(
+                identity.user_id, study_session_id, mistake_id, kind, level, text, requested_at
+            )
 
     async def check_practice_answer(user_id: str, problem: dict, body: AnalyzeRequest) -> PracticeCheckResponse:
         """The normal pipeline, with the question placed in front of what was written."""
 
+        attempt_started_at = time.time()
         accounts = state.accounts
         assert accounts is not None
         request = body.model_copy(update={"session_id": f"{user_id}:practice-{problem['id']}", "study_session_id": None})
@@ -444,7 +449,13 @@ def create_app(services: Services | None = None) -> FastAPI:
         misconception = None
         if problem["course_id"] and response.mistakes and not response.stale:
             misconception = await lessons.note_mistakes(
-                accounts.store, user_id, problem, response.mistakes, state.settings.verify_timeout_s
+                accounts.store, user_id, problem, response.mistakes, state.settings.verify_timeout_s, attempt_started_at
+            )
+        if problem["course_id"] and not response.stale:
+            response.lesson_evidence_id = str(uuid.uuid4())
+            await asyncio.to_thread(
+                accounts.store.record_lesson_evidence, user_id, problem["id"], response.lesson_evidence_id,
+                attempt_started_at, [mistake.id for mistake in response.mistakes], response.resolved_mistake_ids,
             )
         outcome = await asyncio.to_thread(record_practice_outcome, user_id, problem, snapshot_outcome)
         return PracticeCheckResponse(
@@ -517,6 +528,7 @@ def create_app(services: Services | None = None) -> FastAPI:
 
     @app.post("/api/hint", dependencies=[Depends(rate_limited)])
     async def hint(body: HintRequest, identity: Identity | None = Depends(requester)) -> AssistanceResponse:  # noqa: B008
+        requested_at = time.time()
         started = time.perf_counter()
         session_id = scoped(identity, body.session_id)
         mistake = find_mistake(session_id, body.mistake_id)
@@ -526,7 +538,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         text, source, error = await state.help.get(session_id, mistake, body.level)
         state.mistakes.add_hint(session_id, body.mistake_id, text, body.level, source)
         await asyncio.to_thread(
-            note_help, identity, body.study_session_id, body.mistake_id, "hint_requested", body.level, text
+            note_help, identity, body.study_session_id, body.mistake_id, "hint_requested", body.level, text, requested_at
         )
         return _assistance(body.level, text, source, error, started)
 
@@ -535,6 +547,7 @@ def create_app(services: Services | None = None) -> FastAPI:
 
     @app.post("/api/explain", dependencies=[Depends(rate_limited)])
     async def explain(body: ExplainRequest, identity: Identity | None = Depends(requester)) -> AssistanceResponse:  # noqa: B008
+        requested_at = time.time()
         started = time.perf_counter()
         session_id = scoped(identity, body.session_id)
         mistake = find_mistake(session_id, body.mistake_id)
@@ -563,7 +576,7 @@ def create_app(services: Services | None = None) -> FastAPI:
             # What the verifier established, worded without a model. The model's may still arrive for next time.
             text, source, error = template_text(3, mistake), "template", ModelError("timeout", "explanation took too long")
         await asyncio.to_thread(
-            note_help, identity, body.study_session_id, body.mistake_id, "explanation_requested", 3, text
+            note_help, identity, body.study_session_id, body.mistake_id, "explanation_requested", 3, text, requested_at
         )
         return _assistance(3, text, source, error, started)
 
@@ -654,6 +667,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         study_session_id: str | None = Form(None, alias="studySessionId", max_length=64),
         identity: Identity | None = Depends(requester),  # noqa: B008
     ) -> VoiceResponse:
+        requested_at = time.time()
         session_id = scoped(identity, session_id)
         raw = await audio.read(MAX_AUDIO_BYTES + 1)
         if len(raw) > MAX_AUDIO_BYTES:
@@ -679,7 +693,7 @@ def create_app(services: Services | None = None) -> FastAPI:
             text, source, error = await state.help.get(session_id, mistake, level)  # type: ignore[arg-type]
             state.mistakes.add_hint(session_id, mistake.id, text, level, source)
         kind = "explanation_requested" if level == 3 else "hint_requested"
-        await asyncio.to_thread(note_help, identity, study_session_id, mistake.id, kind, level, text)
+        await asyncio.to_thread(note_help, identity, study_session_id, mistake.id, kind, level, text, requested_at)
         response.level, response.text, response.source = level, text, source
         response.model_issue = model_issue(error) if error else None
         return response

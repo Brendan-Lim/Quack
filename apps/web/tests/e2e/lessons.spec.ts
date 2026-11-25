@@ -299,6 +299,31 @@ test.describe("the adaptive loop", () => {
     await expect(page.getByTestId("lesson-next")).toBeEnabled();
   });
 
+  test("new incorrect ink keeps the point already earned on a completed question", async ({ page }) => {
+    test.setTimeout(120_000);
+    await signUp(page);
+    await unlockUpTo(page, "combine_like_terms");
+    await openLevel(page, "combine_like_terms");
+    await page.getByTestId("lesson-try").click();
+    await answerRight(page);
+    await expect(page.getByTestId("lesson-progress")).toHaveText("1 of 3 points");
+
+    const delivered = page.waitForResponse((response) =>
+      response.url().endsWith("/api/learning/events") && response.request().method() === "POST",
+    );
+    await page.getByTestId("lesson-clear").click();
+    await answer(page, "5");
+    await expect(page.getByTestId("lesson-noticed")).toHaveAttribute("data-misconception", "variable_dropped");
+    await expect(page.getByTestId("lesson-correct")).toHaveText("Question completed.");
+    expect((await delivered).ok()).toBe(true);
+
+    // Force a fresh server view after the durable learning event has arrived. The old code shows ½.
+    await page.getByTestId("lesson-back").click();
+    await page.getByTestId("level-start").click();
+    await expect(page.getByTestId("lesson-progress")).toHaveText("1 of 3 points");
+    await expect(page.getByTestId("lesson-correct")).toBeVisible();
+  });
+
   test("G: coming back finds the same lesson and question, from Continue learning", async ({ page, browser }) => {
     test.setTimeout(150_000);
     const address = await signUp(page);

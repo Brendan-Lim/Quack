@@ -9,6 +9,7 @@ import { randomId } from "./persist";
 import type { AnalyzeResponse, ClientEventType, LearningEventIn, LearningEventResult } from "./types";
 
 export type LearningRecord = {
+  lessonEvidenceId?: string | null;
   eventType: ClientEventType;
   mistakeId: string;
   reason?: "erased" | "replaced" | "misread";
@@ -36,7 +37,7 @@ export function eventsFrom(result: AnalyzeResponse, replaced: Record<string, str
   for (const mistake of result.mistakes) {
     if (mistake.isNew) events.push({ eventType: "mistake_detected", mistakeId: mistake.id });
   }
-  return events;
+  return result.lessonEvidenceId ? events.map((event) => ({ ...event, lessonEvidenceId: result.lessonEvidenceId })) : events;
 }
 
 type Send = (events: LearningEventIn[]) => Promise<LearningEventResult>;
