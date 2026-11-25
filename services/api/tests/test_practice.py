@@ -362,6 +362,35 @@ def test_next_reuses_the_successor(
     assert [row["id"] for row in store.problems_in(user_id, session_id)] == [first, successor["id"], third["id"]]
 
 
+def test_next_rolls_back_if_the_start_event_fails(
+    accounts_client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    practice = Practice(accounts_client)
+    first = practice.problem
+    session_id = first["sessionId"]
+    user_id = accounts_client.get("/api/profile", headers=practice.headers).json()["userId"]
+    store = accounts_client.app.state.services.accounts.store
+    url = f"/api/practice/sessions/{session_id}/next"
+    add_event = store.add_event
+
+    def fail_start(*args: Any, **kwargs: Any) -> bool:
+        if kwargs["event_type"] == "practice_started":
+            raise RuntimeError("simulated start event write failure")
+        return add_event(*args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(store, "add_event", fail_start)
+        assert accounts_client.post(url, headers=practice.headers).status_code == 500
+
+    assert [row["id"] for row in store.problems_in(user_id, session_id)] == [first["id"]]
+    assert [event["problem_id"] for event in store.session_events(user_id, session_id)] == [first["id"]]
+    # A bodyless caller can still skip the unanswered question.
+    response = accounts_client.post(url, headers=practice.headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["id"] != first["id"]
+    assert practice.row["status"] == "open"
+
+
 class TestIsolation:
     def test_another_account_cant_see_or_answer_a_problem(self, accounts_client: TestClient, model: Model) -> None:
         practice = Practice(accounts_client)

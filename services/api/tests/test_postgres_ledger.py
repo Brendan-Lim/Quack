@@ -2,19 +2,26 @@
 
 import asyncio
 import os
+import threading
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import replace
+from pathlib import Path
+from typing import Any
 
 import httpx
 import psycopg
 import pytest
 import respx
+from fastapi.testclient import TestClient
 
 from quack.db.database import Database
 from quack.llm.ledger import BudgetExceeded, UsageRecord
 from quack.llm.postgres_ledger import PostgresLedger
 from quack.llm.router import DEFAULT_ROUTES, MAX_ATTEMPTS, ModelError, ModelRouter, Purpose
+from quack.main import build_services, create_app
+from tests.accounts_support import account_settings, register
 from tests.test_release_safety import Answer, completion
 
 
@@ -61,6 +68,65 @@ def test_connection_loss_aborts_the_whole_account_transaction(url: str) -> None:
     finally:
         database.execute("DROP TABLE IF EXISTS quack_tx_test")
         database.close()
+
+
+def test_next_serializes_independent_postgres_connections(
+    tmp_path: Path, url: str, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = account_settings(tmp_path, QUACK_DATABASE_URL=url)
+    first_client = TestClient(create_app(build_services(settings)))
+    second_client = TestClient(create_app(build_services(settings)))
+    first_store = first_client.app.state.services.accounts.store
+    second_store = second_client.app.state.services.accounts.store
+    try:
+        headers = register(first_client, f"{uuid.uuid4()}@example.com")
+        started = first_client.post("/api/practice/sessions", json={"topic": "multiplication"}, headers=headers)
+        assert started.status_code == 200, started.text
+        first = started.json()
+        session_id = first["sessionId"]
+        user_id = first_client.get("/api/profile", headers=headers).json()["userId"]
+        inserting = threading.Event()
+        competing = threading.Event()
+        release = threading.Event()
+        add_problem = first_store.add_problem
+        lock_session = second_store.lock_session
+
+        def hold_first(*args: Any) -> None:
+            inserting.set()
+            assert release.wait(10)
+            add_problem(*args)
+
+        def observe_second(*args: Any) -> None:
+            competing.set()
+            lock_session(*args)
+
+        def advance(client: TestClient) -> str:
+            response = client.post(f"/api/practice/sessions/{session_id}/next",
+                                   json={"currentProblemId": first["id"]}, headers=headers)
+            assert response.status_code == 200, response.text
+            return str(response.json()["id"])
+
+        monkeypatch.setattr(first_store, "add_problem", hold_first)
+        monkeypatch.setattr(second_store, "lock_session", observe_second)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            one = executor.submit(advance, first_client)
+            try:
+                assert inserting.wait(10)
+                two = executor.submit(advance, second_client)
+                assert competing.wait(10)
+            finally:
+                release.set()
+            successor = one.result(timeout=10)
+            assert two.result(timeout=10) == successor != first["id"]
+
+        assert [row["id"] for row in first_store.problems_in(user_id, session_id)] == [first["id"], successor]
+        events = first_store.session_events(user_id, session_id)
+        assert [event["problem_id"] for event in events if event["event_type"] == "practice_started"] == [
+            first["id"], successor,
+        ]
+    finally:
+        first_store.database.close()
+        second_store.database.close()
 
 
 def test_debit_survives_restarts_and_abandoned_operations(url):  # type: ignore[no-untyped-def]
