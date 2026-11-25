@@ -267,7 +267,13 @@ export type PracticeOptions = { topics: { topic: PracticeTopic; label: string }[
 export type MisconceptionOut = { id: string; label: string; idea: string };
 // `misconception` is only for a lesson question, and only when the maths confirms it.
 // `allRead`: both readings agreed on every line, with no doubt. Absent from an API older than round 4.
-export type PracticeCheckResponse = AnalyzeResponse & { outcome: PracticeOutcome; misconception?: MisconceptionOut | null; allRead?: boolean };
+export type PracticeCheckResponse = AnalyzeResponse & {
+  outcome: PracticeOutcome;
+  // Absent when the frontend is paired with an older backend.
+  snapshotOutcome?: PracticeOutcome;
+  misconception?: MisconceptionOut | null;
+  allRead?: boolean;
+};
 export type PracticeReveal = { expectedAnswer: string };
 
 export type PracticeSummary = {

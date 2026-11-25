@@ -171,7 +171,12 @@ def test_check_and_reveal_keep_the_first_outcome(
 
     expected_outcome = "in_progress" if reveal_first else "correct"
     assert reply["outcome"] == expected_outcome
+    assert reply["snapshotOutcome"] == "correct"
     assert check(model, expected_answer)["outcome"] == expected_outcome
+    wrong = check(model, f"{row['prompt_math']} = 999")
+    assert wrong["outcome"] == expected_outcome
+    assert wrong["snapshotOutcome"] == "incorrect"
+    assert wrong["mistakes"]
     assert store.problem(user_id, problem["id"])["status"] == ("revealed" if reveal_first else "correct")
     events = store.session_events(user_id, session_id)
     assert sum(event["event_type"] == "practice_completed" for event in events) == int(not reveal_first)
@@ -425,6 +430,46 @@ class TestMastery:
         )
         assert len(events) == 1
         assert lesson.course()["mastered"] == 1
+
+    def test_failed_mastery_event_rolls_back_the_completion(
+        self, accounts_client: TestClient, model: Model, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        store = store_of(accounts_client)
+        user_id = accounts_client.get("/api/profile", headers=lesson.headers).json()["userId"]
+        session_id = lesson.state["sessionId"]
+        add_event = store.add_event
+
+        def fail_mastery(*args: Any, **kwargs: Any) -> bool:
+            if kwargs["event_type"] == "level_mastered":
+                raise RuntimeError("simulated mastery event write failure")
+            return add_event(*args, **kwargs)
+
+        for _ in range(8):
+            before = lesson.level_of(lesson.level)
+            events = store.session_events(user_id, session_id)
+            expected = lesson.row["expected_answer"]
+            model.reply = [compact(expected)]
+            lesson.version += 1
+            with monkeypatch.context() as patch:
+                patch.setattr(store, "add_event", fail_mastery)
+                response = accounts_client.post(
+                    f"/api/practice/problems/{lesson.question['id']}/check",
+                    json={"sessionId": lesson.question["checkSessionId"], "snapshotVersion": lesson.version,
+                          "image": png(), "inkLines": [{"id": "mastery", "inImage": True}]},
+                    headers=lesson.headers,
+                )
+            if response.status_code == 500:
+                assert lesson.row["status"] == "open"
+                assert store.session_events(user_id, session_id) == events
+                assert lesson.level_of(lesson.level)["mastery"] == before["mastery"]
+                lesson.answer_right(model)
+                assert lesson.level_of(lesson.level)["status"] == "mastered"
+                assert sum(e["event_type"] == "level_mastered" for e in store.session_events(user_id, session_id)) == 1
+                return
+            assert response.status_code == 200 and response.json()["outcome"] == "correct"
+            lesson.next()
+        pytest.fail("the lesson never reached the mastery threshold")
 
     def test_a_revealed_answer_earns_nothing(self, accounts_client: TestClient, model: Model) -> None:
         lesson = Lesson(accounts_client)

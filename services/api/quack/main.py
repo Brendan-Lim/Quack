@@ -417,10 +417,10 @@ def create_app(services: Services | None = None) -> FastAPI:
         prepare_help(request.session_id, response)
         await asyncio.to_thread(remember_what_was_found, user_id, problem["session_id"], response, request.session_id)
 
-        outcome: PracticeOutcome = "in_progress"
+        snapshot_outcome: PracticeOutcome = "in_progress"
         all_read = {line.id for line in body.ink_lines or []} <= set(response.settled_line_ids)
         if response.mistakes:
-            outcome = "incorrect"
+            snapshot_outcome = "incorrect"
         elif response.status == "no_error" and not response.stale and response.lines:
             # Two readings have to agree on all of it, and the last line has to be the finished answer.
             # `x = 3` written last restates the question, and isn't the answer to it.
@@ -440,15 +440,16 @@ def create_app(services: Services | None = None) -> FastAPI:
             if all_read and answer and await shared_pool.completes(
                 problem["prompt_math"], problem["expected_answer"], answer, state.settings.verify_timeout_s, form
             ):
-                outcome = "correct"
+                snapshot_outcome = "correct"
         misconception = None
         if problem["course_id"] and response.mistakes and not response.stale:
             misconception = await lessons.note_mistakes(
                 accounts.store, user_id, problem, response.mistakes, state.settings.verify_timeout_s
             )
-        outcome = await asyncio.to_thread(record_practice_outcome, user_id, problem, outcome)
+        outcome = await asyncio.to_thread(record_practice_outcome, user_id, problem, snapshot_outcome)
         return PracticeCheckResponse(
-            **response.model_dump(), outcome=outcome, misconception=misconception, all_read=all_read
+            **response.model_dump(), outcome=outcome, snapshot_outcome=snapshot_outcome,
+            misconception=misconception, all_read=all_read
         )
 
     def record_practice_outcome(user_id: str, problem: dict, outcome: PracticeOutcome) -> PracticeOutcome:
