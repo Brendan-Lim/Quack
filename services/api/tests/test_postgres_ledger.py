@@ -11,6 +11,7 @@ import psycopg
 import pytest
 import respx
 
+from quack.db.database import Database
 from quack.llm.ledger import BudgetExceeded, UsageRecord
 from quack.llm.postgres_ledger import PostgresLedger
 from quack.llm.router import DEFAULT_ROUTES, MAX_ATTEMPTS, ModelError, ModelRouter, Purpose
@@ -38,6 +39,28 @@ def ledger(url, project=1, account=1, request=1, hourly=1):  # type: ignore[no-u
         yield instance
     finally:
         instance.database.close()
+
+
+def test_connection_loss_aborts_the_whole_account_transaction(url: str) -> None:
+    database = Database(url=url)
+    try:
+        database.execute("CREATE TABLE quack_tx_test (id INTEGER PRIMARY KEY)")
+        with psycopg.connect(url, autocommit=True) as admin:
+            with pytest.raises(psycopg.OperationalError), database.transaction():
+                database.execute("INSERT INTO quack_tx_test VALUES (?)", (1,))
+                backend = database.one("SELECT pg_backend_pid() AS pid")
+                assert backend is not None
+                assert admin.execute("SELECT pg_terminate_backend(%s, 5000)", (backend["pid"],)).fetchone() == (True,)
+                database.execute("INSERT INTO quack_tx_test VALUES (?)", (2,))
+
+            assert admin.execute("SELECT id FROM quack_tx_test").fetchall() == []
+            with database.transaction():
+                database.execute("INSERT INTO quack_tx_test VALUES (?)", (1,))
+                database.execute("INSERT INTO quack_tx_test VALUES (?)", (2,))
+            assert admin.execute("SELECT id FROM quack_tx_test ORDER BY id").fetchall() == [(1,), (2,)]
+    finally:
+        database.execute("DROP TABLE IF EXISTS quack_tx_test")
+        database.close()
 
 
 def test_debit_survives_restarts_and_abandoned_operations(url):  # type: ignore[no-untyped-def]
