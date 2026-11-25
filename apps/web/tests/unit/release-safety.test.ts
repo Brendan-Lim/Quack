@@ -163,6 +163,27 @@ describe("scheduler cancellation and lifecycle", () => {
     return { scheduler, send, restore, onResult, onError, onBusyChange, deliveries, result };
   }
 
+  it("pauses new checks until an in-flight reply has been applied and Finish releases the notebook", async () => {
+    const h = setup();
+    h.scheduler.checkNow();
+    const settled = vi.fn();
+    const finishing = h.scheduler.pause().then(settled);
+    h.scheduler.notifyEdit();
+    h.scheduler.checkNow();
+    expect(settled).not.toHaveBeenCalled();
+
+    h.deliveries[0](h.result);
+    await finishing;
+    expect(h.onResult).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(h.send).toHaveBeenCalledOnce();
+
+    h.scheduler.resume();
+    h.scheduler.checkNow();
+    expect(h.send).toHaveBeenCalledTimes(2);
+    h.scheduler.dispose();
+  });
+
   it("times out even if the transport ignores abort, then retries", async () => {
     const h = setup();
     h.scheduler.checkNow();

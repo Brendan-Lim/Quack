@@ -4,7 +4,7 @@
 // connection at any moment, and nothing can be left to the page being told it's closing. Each has an
 // id from when it happened, so sending it again after a lost reply changes nothing.
 
-import { sendJson } from "./api";
+import { sendProgressJson } from "./api";
 import { randomId } from "./persist";
 import type { AnalyzeResponse, ClientEventType, LearningEventIn, LearningEventResult } from "./types";
 
@@ -41,7 +41,7 @@ export function eventsFrom(result: AnalyzeResponse, replaced: Record<string, str
 
 type Send = (events: LearningEventIn[]) => Promise<LearningEventResult>;
 
-const sendToServer: Send = (events) => sendJson("POST", "/api/learning/events", { events });
+const sendToServer: Send = (events) => sendProgressJson("/api/learning/events", { events });
 
 export class LearningQueue implements LearningSink {
   private queue: LearningEventIn[];
@@ -90,38 +90,46 @@ export class LearningQueue implements LearningSink {
   }
 
   private schedule(delay: number) {
-    if (this.timer !== null) return;
+    if (this.timer !== null || this.sending !== null) return;
     this.timer = setTimeout(() => {
       this.timer = null;
       void this.flush();
     }, delay);
   }
 
-  // Waits until all that's been recorded has been offered to the server, as a recap has to count it.
+  // Background uploads keep trying after a transport failure.
   async flush(): Promise<void> {
-    if (this.sending) await this.sending;
-    if (!this.queue.length) return;
-    this.sending = this.sendBatch();
-    await this.sending;
-    this.sending = null;
-    if (this.queue.length) this.schedule(RETRY_MS);
+    await this.drain().catch(() => {});
   }
 
-  private async sendBatch(): Promise<void> {
-    const batch = this.queue.slice(0, BATCH);
-    try {
-      // A refused event won't be accepted later, so whatever the reply says, these are finished with.
+  // Explicit Finish needs to know whether every batch made it to the server.
+  drain(): Promise<void> {
+    if (this.sending) return this.sending;
+    this.clearTimer();
+    this.sending = this.sendAll().finally(() => {
+      this.sending = null;
+      if (this.queue.length) this.schedule(RETRY_MS);
+    });
+    return this.sending;
+  }
+
+  private async sendAll(): Promise<void> {
+    while (this.queue.length) {
+      const batch = this.queue.slice(0, BATCH);
+      // A refused event won't be accepted later. On transport failure, keep the same events and IDs.
       await this.send(batch);
-    } catch {
-      return;
+      const sent = new Set(batch.map((event) => event.id));
+      this.queue = this.queue.filter((event) => !sent.has(event.id));
+      this.save();
     }
-    const sent = new Set(batch.map((event) => event.id));
-    this.queue = this.queue.filter((event) => !sent.has(event.id));
-    this.save();
+  }
+
+  private clearTimer() {
+    if (this.timer !== null) clearTimeout(this.timer);
+    this.timer = null;
   }
 
   dispose() {
-    if (this.timer !== null) clearTimeout(this.timer);
-    this.timer = null;
+    this.clearTimer();
   }
 }

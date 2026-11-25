@@ -524,6 +524,9 @@ export function useQuack(options: QuackOptions = NO_OPTIONS) {
     });
   }, []);
 
+  const pauseChecks = useCallback(() => schedulerRef.current?.pause() ?? Promise.resolve(), []);
+  const resumeChecks = useCallback(() => schedulerRef.current?.resume(), []);
+
   const checkNow = useCallback(() => {
     unlockAudio();
     setImportedImage(null);
@@ -870,6 +873,8 @@ export function useQuack(options: QuackOptions = NO_OPTIONS) {
     toggleMonitoring,
     toggleMuted,
     checkNow,
+    pauseChecks,
+    resumeChecks,
     askForHelp,
     explain,
     tapDuck,

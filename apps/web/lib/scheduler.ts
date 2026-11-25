@@ -69,6 +69,8 @@ export class AnalysisScheduler {
   private flights: Flight[] = [];
   private drawing = false;
   private enabled = true;
+  private paused = false;
+  private idleWaiters: (() => void)[] = [];
   private lastHash: string | null = null;
   // There are edits no finished check has covered.
   private pending = false;
@@ -105,6 +107,24 @@ export class AnalysisScheduler {
     }
   }
 
+  // Finish waits for replies already under way, including applying their learning events.
+  pause(): Promise<void> {
+    this.paused = true;
+    this.clearTimer();
+    if (!this.flights.length) return Promise.resolve();
+    return new Promise((resolve) => this.idleWaiters.push(resolve));
+  }
+
+  resume() {
+    this.paused = false;
+    if (this.manualWaiting && !this.flights.length) {
+      this.manualWaiting = false;
+      this.checkNow();
+    } else {
+      this.rearm();
+    }
+  }
+
   setDrawing(drawing: boolean) {
     this.drawing = drawing;
     if (drawing) {
@@ -127,7 +147,7 @@ export class AnalysisScheduler {
   }
 
   checkNow() {
-    if (this.disposed) return;
+    if (this.disposed || this.paused) return;
     // Pressing again while a check runs can't make it faster, and used to start the same
     // expensive reading over and over on the server.
     const newest = this.newest;
@@ -182,7 +202,7 @@ export class AnalysisScheduler {
   }
 
   private rearm() {
-    if (this.disposed || !this.pending || !this.enabled || this.drawing || this.timer !== null || !this.mayStart()) return;
+    if (this.disposed || this.paused || !this.pending || !this.enabled || this.drawing || this.timer !== null || !this.mayStart()) return;
     // The pause counts from the last edit, so a check that ends after the pause has passed is
     // followed at once by the next.
     const now = this.now();
@@ -241,7 +261,7 @@ export class AnalysisScheduler {
   }
 
   private async run(trigger: Trigger) {
-    if (this.disposed) return;
+    if (this.disposed || this.paused) return;
     const capture = this.deps.capture(trigger);
     if (!capture) {
       mark("check_skipped", undefined, { trigger, reason: "nothing_to_check" });
@@ -344,9 +364,13 @@ export class AnalysisScheduler {
       const index = this.flights.indexOf(flight);
       if (index >= 0) this.flights.splice(index, 1);
       // Busy until the last check under way has finished, and said once. After a cancel, the list is already empty.
-      if (this.flights.length === 0 && (index >= 0 || controller.signal.aborted)) this.deps.onBusyChange(false);
+      if (this.flights.length === 0) {
+        if (index >= 0 || controller.signal.aborted) this.deps.onBusyChange(false);
+        for (const resolve of this.idleWaiters) resolve();
+        this.idleWaiters = [];
+      }
     }
-    if (this.manualWaiting && !this.disposed && this.flights.length === 0) {
+    if (this.manualWaiting && !this.disposed && !this.paused && this.flights.length === 0) {
       // The automatic check's answer didn't cover the page as it is now. Ask again, as asked.
       this.manualWaiting = false;
       this.clearTimer();

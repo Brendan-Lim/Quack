@@ -14,7 +14,12 @@ import { NotebookCanvas, type Paper, type Tool } from "./notebook/NotebookCanvas
 const PRIVACY_KEY = "quack.privacy-seen";
 
 // What opens over the notebook can see the page, and bring a place on it back into view.
-export type NotebookHandle = { strokes: () => readonly PenStroke[]; bringIntoView: (y: number) => void };
+export type NotebookHandle = {
+  strokes: () => readonly PenStroke[];
+  bringIntoView: (y: number) => void;
+  pauseChecks: () => Promise<void>;
+  resumeChecks: () => void;
+};
 
 type Props = {
   options?: QuackOptions;
@@ -27,7 +32,7 @@ type Props = {
 
 export function QuackApp({ options, accountActions, notebookHandle, covered = false }: Props = {}) {
   const quack = useQuack(options);
-  const { store, duck, dismiss, cancelSelection, selection, selectionGone } = quack;
+  const { store, duck, dismiss, cancelSelection, selection, selectionGone, pauseChecks, resumeChecks } = quack;
   const notebook = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState(PEN_COLORS[0].value);
@@ -40,11 +45,16 @@ export function QuackApp({ options, accountActions, notebookHandle, covered = fa
 
   useEffect(() => {
     if (!notebookHandle) return;
-    notebookHandle.current = { strokes: () => store.getState().strokes, bringIntoView: (y) => setFocus({ y }) };
+    notebookHandle.current = {
+      strokes: () => store.getState().strokes,
+      bringIntoView: (y) => setFocus({ y }),
+      pauseChecks,
+      resumeChecks,
+    };
     return () => {
       notebookHandle.current = null;
     };
-  }, [notebookHandle, store]);
+  }, [notebookHandle, store, pauseChecks, resumeChecks]);
 
   const chooseTool = useCallback(
     (next: Tool) => {
