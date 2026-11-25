@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuthProblem, LocalAuth, SupabaseAuth } from "@/lib/auth";
 import { eventsFrom, LearningQueue } from "@/lib/learning";
-import type { AnalyzeResponse, LearningEventIn, Mistake } from "@/lib/types";
+import type { AnalyzeResponse, LearningEventIn, LearningEventResult, Mistake } from "@/lib/types";
 
 class MemoryStorage {
   private items = new Map<string, string>();
@@ -47,6 +47,19 @@ describe("what a reply says happened", () => {
 
 describe("the event queue", () => {
   const event = { eventType: "mistake_detected" as const, mistakeId: "m1" };
+
+  it("flushes all 51 events, including the last partial batch", async () => {
+    const send = vi.fn<(events: LearningEventIn[]) => Promise<LearningEventResult>>().mockResolvedValue({ refused: [] });
+    const queue = new LearningQueue("q", () => "s", send, new MemoryStorage());
+    try {
+      for (let i = 0; i < 51; i++) queue.record(event);
+      await queue.flush();
+      expect(send.mock.calls.map(([batch]) => batch.length)).toEqual([50, 1]);
+      expect(queue.pending).toBe(0);
+    } finally {
+      queue.dispose();
+    }
+  });
 
   it("keeps events until the server has them, across a reload", async () => {
     const storage = new MemoryStorage();

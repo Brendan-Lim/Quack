@@ -363,6 +363,67 @@ test.describe("recaps", () => {
     await expect(glance(page, "found")).toHaveText("1");
   });
 
+  test("Finish waits for a pending correction and retries its upload with the same id", async ({ page }) => {
+    await signUpAndCalibrate(page);
+    await script({ reading: reading(first("2 * 3 = 5")) });
+    const detected = page.waitForResponse((response) =>
+      response.url().endsWith("/api/learning/events") && response.ok());
+    await write(page, "2 * 3 = 5", 80, 80);
+    await expectDuck(page, "alert");
+    const original = (await detected).request().postDataJSON().events[0].sessionId;
+
+    let releaseCheck!: () => void;
+    const holdCheck = new Promise<void>((resolve) => { releaseCheck = resolve; });
+    let checkCount = 0;
+    let finishCount = 0;
+    page.on("request", (request) => {
+      if (request.url().endsWith(`/api/sessions/${original}/finish`)) finishCount++;
+    });
+    await page.route("**/api/analyze", async (route) => {
+      checkCount++;
+      await holdCheck;
+      await route.continue();
+    });
+    let failUpload = true;
+    const correctionUploads: { id: string; sessionId: string }[] = [];
+    await page.route("**/api/learning/events", async (route) => {
+      const corrections = route.request().postDataJSON().events.filter(
+        (event: { eventType: string }) => event.eventType === "correction_verified",
+      );
+      correctionUploads.push(...corrections);
+      if (failUpload && corrections.length) await route.abort();
+      else await route.continue();
+    });
+
+    await script({ reading: reading(first("2 * 3 = 5"), first("2 * 3 = 6")) });
+    await write(page, "2 * 3 = 6", 80, 160);
+    await expect.poll(() => checkCount).toBe(1);
+    const finish = page.getByTestId("finish-session");
+    try {
+      await finish.click();
+      await expect(finish).toBeDisabled({ timeout: 2000 });
+    } finally {
+      releaseCheck();
+    }
+    await expect(page.getByTestId("home-problem")).toContainText("Try Finish session again");
+    await expect(page.getByTestId("recap")).toHaveCount(0);
+    expect(correctionUploads.length).toBeGreaterThan(0);
+    expect(finishCount).toBe(0);
+
+    failUpload = false;
+    const saved = page.waitForResponse((response) => response.url().endsWith(`/api/sessions/${original}/finish`));
+    await finish.click();
+    await expect(glance(page, "found")).toHaveText("1");
+    await expect(glance(page, "corrected")).toHaveText("1");
+    expect(correctionUploads.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(correctionUploads.map(({ id }) => id)).size).toBe(1);
+    expect(new Set(correctionUploads.map(({ sessionId }) => sessionId))).toEqual(new Set([original]));
+    const recap = await (await saved).json();
+    expect(recap.sessionId).toBe(original);
+    expect(recap.glance.corrected).toBe(1);
+    expect(finishCount).toBe(1);
+  });
+
   test("a saved recap can be read with no connection", async ({ page }) => {
     await signUpAndCalibrate(page);
     await script({ reading: reading(first("2 * 3 = 5")) });

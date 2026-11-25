@@ -65,6 +65,8 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
   const [wrappedUp, setWrappedUp] = useState<Recap | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const finishPending = useRef(false);
+  const notebook = useRef<NotebookHandle | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   // A lesson under way, to go back to in one tap. Only from the server, so never made up.
   const [resume, setResume] = useState<ContinueOut | null>(null);
@@ -114,22 +116,27 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
 
   const finish = useCallback(async () => {
     const id = session.get();
-    if (finishing || !id) return;
+    const page = notebook.current;
+    if (finishPending.current || !id || !page) return;
+    finishPending.current = true;
     setFinishing(true);
     setProblem(null);
     try {
-      await queue.flush();
+      await page.pauseChecks();
+      await queue.drain();
       const recap = await finishSession(id);
       cacheRecap(user.id, recap);
       setView({ name: "recap", recap, practice: [], from: "finish" });
       // Whatever happens next belongs to a new session. The notes carry on as they were.
       await startOrResume();
     } catch {
-      setProblem("Quack can't finish the session without a connection. Your notes are safe, and it will all still be there.");
+      setProblem("Quack couldn't sync this session. Your notes and progress are safe. Try Finish session again.");
     } finally {
+      page.resumeChecks();
+      finishPending.current = false;
       setFinishing(false);
     }
-  }, [finishing, session, queue, startOrResume, user.id]);
+  }, [session, queue, startOrResume, user.id]);
 
   const openRecap = useCallback(
     async (recapId: string) => {
@@ -152,7 +159,6 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
     onSignedOut();
   }, [auth, queue, onSignedOut]);
 
-  const notebook = useRef<NotebookHandle | null>(null);
   const options = useMemo<QuackOptions>(
     () => ({
       notebookKey: notebookKeyFor(user.id),
@@ -239,9 +245,9 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
 
   return (
     <>
-      <QuackApp options={options} accountActions={actions} notebookHandle={notebook} covered={view.name !== "notebook"} />
+      <QuackApp options={options} accountActions={actions} notebookHandle={notebook} covered={finishing || view.name !== "notebook"} />
 
-      {view.name === "notebook" && (problem || wrappedUp) && (
+      {view.name === "notebook" && !finishing && (problem || wrappedUp) && (
         <div className="fixed top-16 left-1/2 z-20 w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl bg-white p-3 text-[14px] shadow-md ring-1 ring-ink/5">
           {problem ? (
             <div className="flex items-center justify-between gap-3">
@@ -270,7 +276,7 @@ export function AccountHome({ user, auth, start = "notebook", onSignedOut, onRed
         </div>
       )}
 
-      {view.name === "notebook" && !problem && !wrappedUp && resume && !resumeDismissed && (
+      {view.name === "notebook" && !finishing && !problem && !wrappedUp && resume && !resumeDismissed && (
         <div data-testid="continue-chip" className="fixed top-16 left-1/2 z-20 flex w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 items-center gap-1 rounded-2xl bg-white p-1.5 pl-3 text-[14px] shadow-md ring-1 ring-duck-deep/40">
           <GraduationCap size={18} aria-hidden className="shrink-0 text-duck-deep" />
           <button
