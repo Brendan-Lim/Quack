@@ -533,7 +533,9 @@ class MisconceptionOut(ApiModel):
 
 
 class PracticeCheckResponse(AnalyzeResponse):
+    # The saved outcome takes precedence once this question has been completed or revealed.
     outcome: PracticeOutcome = "in_progress"
+    snapshot_outcome: PracticeOutcome = "in_progress"
     # A lesson question only: the misconception a verified mistake here shows, when the maths confirms it.
     misconception: MisconceptionOut | None = None
     # Every line on the page was read the same way by both readings, with no doubt from either. When it's

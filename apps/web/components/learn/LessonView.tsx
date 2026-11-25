@@ -310,6 +310,7 @@ type SheetProps = {
 function Sheet({ lesson, level, queue, moving, problem, onCorrect, onNext, onFinish, onBack, onNotebook, active = true }: SheetProps) {
   const question = lesson.question!;
   const [done, setDone] = useState(question.status === "correct");
+  const [correctVersion, setCorrectVersion] = useState<number | null>(null);
   const [noticed, setNoticed] = useState<MisconceptionOut | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [nudges, setNudges] = useState<string[]>([]);
@@ -342,9 +343,10 @@ function Sheet({ lesson, level, queue, moving, problem, onCorrect, onNext, onFin
         if (checked.outcome === "correct") {
           setDone(true);
           setNotYet(null);
-          // Once, when two readings agree on every line and the last one finishes it. Not again for a
-          // later check of the same page, and never for "nothing wrong yet", which isn't right.
-          if (!celebrated.current) {
+          const snapshotCorrect = !checked.stale && !checked.mistakes.length &&
+            (checked.snapshotOutcome ?? checked.outcome) === "correct";
+          setCorrectVersion(snapshotCorrect ? checked.snapshotVersion : null);
+          if (snapshotCorrect && !celebrated.current) {
             celebrated.current = true;
             setCheer(CHEERS[question.number % CHEERS.length]);
           }
@@ -362,6 +364,7 @@ function Sheet({ lesson, level, queue, moving, problem, onCorrect, onNext, onFin
   );
   const quack = useQuack(options);
   const notebook = useSyncExternalStore(quack.store.subscribe, quack.store.getState, quack.store.getState);
+  const currentAnswerCorrect = correctVersion === notebook.version;
 
   const muted = quack.muted;
   const activeRef = useRef(active);
@@ -515,10 +518,10 @@ function Sheet({ lesson, level, queue, moving, problem, onCorrect, onNext, onFin
                   <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success text-white">
                     <svg viewBox="0 0 24 24" width="16" height="16" className="tick-draw" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
                   </span>
-                  That&apos;s right, and Quack checked every line.
+                  {currentAnswerCorrect ? "That’s right, and Quack checked every line." : "Question completed."}
                 </p>
               )}
-              {!done && noticed && (
+              {!currentAnswerCorrect && noticed && (
                 <p data-testid="lesson-noticed" data-misconception={noticed.id} className="strip-in flex items-start gap-2.5 rounded-xl bg-alert-soft px-3 py-2 text-[14.5px] leading-snug text-ink">
                   <Search size={17} aria-hidden className="mt-0.5 shrink-0 text-alert-ink" />
                   <span><span className="font-semibold text-alert-ink">It looks like {noticed.label.toLowerCase()}.</span> {prettyMath(noticed.idea)}</span>

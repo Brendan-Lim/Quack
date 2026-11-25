@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, CircleCheck, Eraser, Pen, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { checkPracticeAnswer, finishPractice, nextProblem, revealAnswer, startPractice } from "@/lib/account";
 import { setStudySession } from "@/lib/api";
 import { prettyMath } from "@/lib/mistakes";
@@ -119,6 +119,7 @@ function Sheet({ problem, queue, asked, advancing, nextError, onNext, onEnd }: {
   onEnd: () => void;
 }) {
   const [done, setDone] = useState(false);
+  const [correctVersion, setCorrectVersion] = useState<number | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("pen");
 
@@ -131,12 +132,19 @@ function Sheet({ problem, queue, asked, advancing, nextError, onNext, onEnd }: {
       alwaysWatching: true,
       learning: queue.forSession(problem.sessionId),
       onApplied: (result: AnalyzeResponse) => {
-        if ((result as PracticeCheckResponse).outcome === "correct") setDone(true);
+        const checked = result as PracticeCheckResponse;
+        if (checked.outcome !== "correct") return;
+        setDone(true);
+        const snapshotCorrect = !checked.stale && !checked.mistakes.length &&
+          (checked.snapshotOutcome ?? checked.outcome) === "correct";
+        setCorrectVersion(snapshotCorrect ? checked.snapshotVersion : null);
       },
     }),
     [problem, queue],
   );
   const quack = useQuack(options);
+  const notebook = useSyncExternalStore(quack.store.subscribe, quack.store.getState, quack.store.getState);
+  const currentAnswerCorrect = correctVersion === notebook.version;
 
   const reveal = async () => {
     const { expectedAnswer } = await revealAnswer(problem.id);
@@ -161,7 +169,7 @@ function Sheet({ problem, queue, asked, advancing, nextError, onNext, onEnd }: {
         <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-line pt-2.5">
           <div aria-live="polite" className="flex min-h-11 flex-1 basis-56 flex-col justify-center gap-1.5 text-[15px]">
             {done && (
-              <p data-testid="practice-correct" className="strip-success flex items-center gap-2.5 rounded-xl bg-success-soft px-3 py-2 font-semibold text-success-ink"><CircleCheck size={19} aria-hidden />That&apos;s right.</p>
+              <p data-testid="practice-correct" className="strip-success flex items-center gap-2.5 rounded-xl bg-success-soft px-3 py-2 font-semibold text-success-ink"><CircleCheck size={19} aria-hidden />{currentAnswerCorrect ? "That’s right." : "Question completed."}</p>
             )}
             {!done && answer && <p data-testid="practice-answer" className="strip-in rounded-xl bg-paper-deep/70 px-3 py-2 text-ink-soft">One answer is <span className="font-semibold text-ink">{prettyMath(answer)}</span>.</p>}
             {!done && !answer && quack.checking && (

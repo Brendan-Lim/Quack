@@ -266,6 +266,39 @@ test.describe("the adaptive loop", () => {
     await expect(page.getByTestId("lesson-progress")).toHaveText("1 of 3 points");
   });
 
+  test("a saved completion does not praise incorrect ink after a lost check reply", async ({ page }) => {
+    await signUp(page);
+    await unlockUpTo(page, "combine_like_terms");
+    await openLevel(page, "combine_like_terms");
+    await page.getByTestId("lesson-try").click();
+    await expect(prompt(page)).toHaveText("Simplify 3x + 2x");
+
+    let saved = false;
+    let changedInk = false;
+    await page.route("**/api/practice/problems/*/check", async (route) => {
+      const response = await route.fetch();
+      const checked = await response.json();
+      if (!changedInk) {
+        saved ||= checked.outcome === "correct";
+        await route.abort();
+      } else {
+        expect(checked.outcome).toBe("correct");
+        expect(checked.snapshotOutcome).toBe("incorrect");
+        await route.fulfill({ response });
+      }
+    });
+    await answer(page, "5x");
+    await expect.poll(() => saved).toBe(true);
+    await page.getByTestId("lesson-clear").click();
+    changedInk = true;
+    await answer(page, "5");
+
+    await expect(page.getByTestId("lesson-correct")).toHaveText("Question completed.");
+    await expect(page.getByTestId("lesson").getByTestId("cheer")).toHaveCount(0);
+    await expect(page.getByTestId("lesson-noticed")).toBeVisible();
+    await expect(page.getByTestId("lesson-next")).toBeEnabled();
+  });
+
   test("G: coming back finds the same lesson and question, from Continue learning", async ({ page, browser }) => {
     test.setTimeout(150_000);
     const address = await signUp(page);
