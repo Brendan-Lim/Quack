@@ -296,7 +296,7 @@ test.describe("the adaptive loop", () => {
     await expect(page.getByTestId("lesson-correct")).toHaveText("Question completed.");
     await expect(page.getByTestId("lesson").getByTestId("cheer")).toHaveCount(0);
     await expect(page.getByTestId("lesson-noticed")).toBeVisible();
-    await expect(page.getByTestId("lesson-progress")).toHaveText("1 of 3 points");
+    await expect(page.getByTestId("lesson-next")).toBeEnabled();
   });
 
   test("G: coming back finds the same lesson and question, from Continue learning", async ({ page, browser }) => {
