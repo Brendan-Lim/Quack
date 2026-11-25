@@ -217,8 +217,7 @@ test.describe("correcting a line", () => {
 
   test("edits to two lines during one check don't swap their mistakes", async ({ page }) => {
     await twoMistakes(page);
-    await settle(page, 300);
-    const quacks = await quacksPlayed(page);
+    await expect.poll(() => quacksPlayed(page)).toBe(2);
     await script({ reading: reading(sum("3 * 4 = 12"), sum("1 ÷ 2 = 2")), delay_ms: 1200 });
     await write(page, "2", 80 + 34 * 6, TOP);
     await settle(page, 700);
@@ -226,7 +225,7 @@ test.describe("correcting a line", () => {
     await script({ reading: reading(sum("3 * 4 = 12"), sum("1 ÷ 2 = 1/2")), delay_ms: 0 });
     await write(page, "1", 80 + 34 * 6, SECOND);
     await expect(count(page)).toHaveCount(0);
-    expect(await quacksPlayed(page)).toBe(quacks);
+    expect(await quacksPlayed(page)).toBe(2);
     await expect(duck(page)).not.toHaveAttribute("data-duck-state", "alert");
   });
 });
