@@ -26,6 +26,9 @@ export function PracticeView({ topic, origin, source = null, queue, onClose }: P
   const [summary, setSummary] = useState<PracticeSummary | null>(null);
   const [startProblem, setStartProblem] = useState<string | null>(null);
   const [asked, setAsked] = useState(1);
+  const [advancing, setAdvancing] = useState(false);
+  const [nextError, setNextError] = useState<string | null>(null);
+  const nextPending = useRef(false);
   const started = useRef(false);
 
   useEffect(() => {
@@ -42,9 +45,19 @@ export function PracticeView({ topic, origin, source = null, queue, onClose }: P
   }, [problem]);
 
   const next = useCallback(async () => {
-    if (!problem) return;
-    setProblem(await nextProblem(problem.sessionId));
-    setAsked((count) => count + 1);
+    if (!problem || nextPending.current) return;
+    nextPending.current = true;
+    setAdvancing(true);
+    setNextError(null);
+    try {
+      setProblem(await nextProblem(problem.sessionId, problem.id));
+      setAsked((count) => count + 1);
+    } catch {
+      setNextError("Quack couldn't load the next question. Try again.");
+    } finally {
+      nextPending.current = false;
+      setAdvancing(false);
+    }
   }, [problem]);
 
   const end = useCallback(async () => {
@@ -74,7 +87,16 @@ export function PracticeView({ topic, origin, source = null, queue, onClose }: P
           <button type="button" data-testid="practice-close" onClick={onClose} className="min-h-11 self-center rounded-xl bg-ink px-5 font-semibold text-paper hover:opacity-85">Back to my notebook</button>
         </main>
       ) : problem ? (
-        <Sheet key={problem.id} problem={problem} queue={queue} asked={asked} onNext={() => void next().catch(() => {})} onEnd={() => void end().catch(() => onClose())} />
+        <Sheet
+          key={problem.id}
+          problem={problem}
+          queue={queue}
+          asked={asked}
+          advancing={advancing}
+          nextError={nextError}
+          onNext={() => void next()}
+          onEnd={() => void end().catch(() => onClose())}
+        />
       ) : (
         <main className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
           <p data-testid="practice-loading" className="text-[15px] text-muted">{startProblem ?? "Finding a question..."}</p>
@@ -87,7 +109,15 @@ export function PracticeView({ topic, origin, source = null, queue, onClose }: P
 
 // One question on its own page. This is the same notebook and duck, and nothing written here is saved
 // or goes near the notes.
-function Sheet({ problem, queue, asked, onNext, onEnd }: { problem: PracticeProblem; queue: LearningQueue; asked: number; onNext: () => void; onEnd: () => void }) {
+function Sheet({ problem, queue, asked, advancing, nextError, onNext, onEnd }: {
+  problem: PracticeProblem;
+  queue: LearningQueue;
+  asked: number;
+  advancing: boolean;
+  nextError: string | null;
+  onNext: () => void;
+  onEnd: () => void;
+}) {
   const [done, setDone] = useState(false);
   const [answer, setAnswer] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("pen");
@@ -144,9 +174,10 @@ function Sheet({ problem, queue, asked, onNext, onEnd }: { problem: PracticeProb
           <div className="flex flex-wrap gap-1">
             {!done && !answer && <button type="button" data-testid="practice-reveal" onClick={() => void reveal().catch(() => {})} className="btn btn-ghost px-3 text-muted">Show the answer</button>}
             <button type="button" data-testid="practice-end" onClick={onEnd} className="btn btn-ghost px-3">End practice</button>
-            <button type="button" data-testid="practice-next" onClick={onNext} className={done ? "btn btn-brand nudge-once px-5" : "btn btn-secondary px-4"}>Next question</button>
+            <button type="button" data-testid="practice-next" onClick={onNext} disabled={advancing} className={done ? "btn btn-brand nudge-once px-5" : "btn btn-secondary px-4"}>Next question</button>
           </div>
         </div>
+        {nextError && <p role="alert" data-testid="practice-next-problem" className="w-full text-sm text-alert">{nextError}</p>}
       </header>
       <NotebookCanvas store={quack.store} tool={tool} color="#262626" width={3} paper="grid" markers={quack.markers} onDrawingChange={quack.setDrawing} />
       {quack.duck.issue && <p data-testid="issue" className="fixed bottom-4 left-3 z-20 max-w-[min(340px,calc(100vw-9rem))] rounded-2xl bg-white/95 px-3 py-1.5 text-[13px] text-alert shadow-sm ring-1 ring-ink/5">{quack.duck.issue.message}</p>}

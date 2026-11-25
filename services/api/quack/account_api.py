@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import threading
 import time
 import uuid
@@ -32,6 +33,7 @@ from quack.schemas import (
     DeleteAccountResult,
     LearningEventBatch,
     LearningEventResult,
+    LessonNext,
     LocalCredentials,
     LocalSession,
     MistakeEntryDetail,
@@ -456,18 +458,15 @@ def build_account_router(
 
     # Practice
 
-    async def _new_problem(
-        user_id: str, session: dict[str, Any], difficulty: str, source_mistake_id: str | None = None
-    ) -> PracticeProblem:
-        topic = session["topic"]
-        asked = await asyncio.to_thread(store.problems_in, user_id, session["id"])
+    async def _practice_candidate(
+        session: dict[str, Any], difficulty: str, asked: list[dict[str, Any]], source_mistake_id: str | None = None,
+    ) -> dict[str, Any] | None:
         question = await practice_service.new_question(
-            topic, difficulty, {row["prompt_math"] for row in asked}, settings.verify_timeout_s
+            session["topic"], difficulty, {row["prompt_math"] for row in asked}, settings.verify_timeout_s
         )
         if question is None:
-            # Nothing passed the verifier, so nothing is shown that couldn't be checked.
-            raise HTTPException(status_code=503, detail="no question available")
-        row = {
+            return None
+        return {
             "id": str(uuid.uuid4()),
             "session_id": session["id"],
             "topic": question.topic,
@@ -478,19 +477,44 @@ def build_account_router(
             "verification_method": question.method,
             "source_mistake_id": source_mistake_id,
         }
-        await asyncio.to_thread(store.add_problem, user_id, row)
-        await asyncio.to_thread(
-            lambda: store.add_event(
+
+    def _practice_successor(asked: list[dict[str, Any]], after: str | None) -> dict[str, Any] | None:
+        if (asked[-1]["id"] if asked else None) == after:
+            return None
+        if after is None:
+            return asked[0]
+        for index, problem in enumerate(asked[:-1]):
+            if problem["id"] == after:
+                return asked[index + 1]
+        raise HTTPException(status_code=404, detail="unknown problem")
+
+    def _save_practice_question(
+        user_id: str, session_id: str, after: str | None, candidate: dict[str, Any] | None,
+    ) -> PracticeProblem:
+        with store.database.transaction():
+            store.lock_session(user_id, session_id)
+            if store.session(user_id, session_id) is None:
+                raise HTTPException(status_code=404, detail="unknown session")
+            asked = store.problems_in(user_id, session_id)
+            successor = _practice_successor(asked, after)
+            if successor is not None:
+                return _public_problem(successor)
+            if candidate is None:
+                raise HTTPException(status_code=503, detail="no question available")
+            if asked:
+                # Keep the successor after its predecessor even if the clock tick repeats or moves back.
+                candidate["created_at"] = max(time.time(), math.nextafter(asked[-1]["created_at"], math.inf))
+            store.add_problem(user_id, candidate)
+            store.add_event(
                 user_id,
-                session_id=session["id"],
+                session_id=session_id,
                 event_type="practice_started",
                 source="practice",
-                dedupe_key=f"practice_started:{row['id']}",
-                problem_id=row["id"],
-                topic=question.topic,
+                dedupe_key=f"practice_started:{candidate['id']}",
+                problem_id=candidate["id"],
+                topic=candidate["topic"],
             )
-        )
-        return _public_problem(row)
+            return _public_problem(candidate)
 
     @router.get("/practice/topics")
     async def practice_topics() -> PracticeOptions:
@@ -512,23 +536,32 @@ def build_account_router(
         source = body.source_mistake_id
         if source and await asyncio.to_thread(store.mistake_fact, user_id, source) is None:
             source = None
-        return await _new_problem(user_id, session, "basic", source)
+        candidate = await _practice_candidate(session, "basic", [], source)
+        return await asyncio.to_thread(_save_practice_question, user_id, session["id"], None, candidate)
 
     @router.post("/practice/sessions/{session_id}/next")
-    async def next_problem(session_id: str, identity: Identity = you) -> PracticeProblem:
+    async def next_problem(
+        session_id: str, body: LessonNext | None = None, identity: Identity = you,
+    ) -> PracticeProblem:
         user_id = identity.user_id
         session = await asyncio.to_thread(store.session, user_id, session_id)
         if session is None or session["kind"] != "practice":
             raise HTTPException(status_code=404, detail="unknown session")
         asked = await asyncio.to_thread(store.problems_in, user_id, session_id)
-        # Only a little harder, and only after one that went well. There's no adaptive model here.
         last = asked[-1] if asked else None
+        # Callers that omit the displayed ID still advance from the latest question.
+        after = body.current_problem_id if body and body.current_problem_id is not None else (last["id"] if last else None)
+        successor = _practice_successor(asked, after)
+        if successor is not None:
+            return _public_problem(successor)
+        # Only a little harder, and only after one that went well. There's no adaptive model here.
         events = await asyncio.to_thread(store.session_events, user_id, session_id)
         went_well = last is not None and last["status"] == "correct" and not any(
             event["event_type"] in ("hint_requested", "explanation_requested") for event in events
         )
         source = last["source_mistake_id"] if last else None
-        return await _new_problem(user_id, session, "intermediate" if went_well else "basic", source)
+        candidate = await _practice_candidate(session, "intermediate" if went_well else "basic", asked, source)
+        return await asyncio.to_thread(_save_practice_question, user_id, session_id, after, candidate)
 
     @router.post("/practice/sessions/{session_id}/finish")
     async def finish_practice(session_id: str, identity: Identity = you) -> PracticeSummary:

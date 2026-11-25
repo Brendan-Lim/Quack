@@ -397,7 +397,8 @@ class UserStore:
             (
                 problem["id"], user_id, problem["session_id"], problem.get("source_mistake_id"), problem["topic"],
                 problem["difficulty"], problem["prompt_math"], problem["prompt_display"], problem["expected_answer"],
-                problem["verification_method"], time.time(), problem.get("course_id"), problem.get("level_id"),
+                problem["verification_method"], problem.get("created_at", time.time()),
+                problem.get("course_id"), problem.get("level_id"),
                 problem.get("skill_id"), problem.get("template_id"), problem.get("instruction"), problem.get("probes_json"),
                 problem.get("selection_kind"), problem.get("selection_reason"), problem.get("selection_target"),
                 problem.get("selection_json"), problem.get("context_json"),
@@ -515,7 +516,7 @@ class UserStore:
 
     def problems_in(self, user_id: str, session_id: str) -> list[dict[str, Any]]:
         return self.database.query(
-            "SELECT * FROM practice_problems WHERE user_id = ? AND session_id = ? ORDER BY created_at",
+            "SELECT * FROM practice_problems WHERE user_id = ? AND session_id = ? ORDER BY created_at, id",
             (user_id, session_id),
         )
 
