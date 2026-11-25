@@ -6,18 +6,21 @@ is a separate question, which none of this answers.
 
 from __future__ import annotations
 
+import asyncio
 import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import pytest
 import respx
 from fastapi.testclient import TestClient
 
+from quack.services.verifier_pool import shared_pool
 from tests.accounts_support import register
 from tests.test_line_memory import compact
 from tests.test_pipeline import png
-from tests.test_practice import CHAT, Model
+from tests.test_practice import CHAT, Model, Practice
 
 COURSE = "algebra_foundations"
 # What each level needs done first, so a test can start there. Moving on isn't mastery.
@@ -121,6 +124,93 @@ def unlock(client: TestClient, headers: dict[str, str], *levels: str) -> None:
     user = client.get("/api/profile", headers=headers).json()["userId"]
     for level in levels:
         store_of(client).mark_level(user, COURSE, level, "moved_on_at")
+
+
+@pytest.mark.parametrize("guided", [False, True], ids=["practice", "lesson"])
+@pytest.mark.parametrize("reveal_first", [True, False], ids=["reveal-wins", "check-wins"])
+def test_check_and_reveal_keep_the_first_outcome(
+    accounts_client: TestClient, model: Model, monkeypatch: pytest.MonkeyPatch, guided: bool, reveal_first: bool,
+) -> None:
+    if guided:
+        lesson = Lesson(accounts_client)
+        headers, problem, row, check = lesson.headers, lesson.question, lesson.row, lesson.write
+        session_id = lesson.state["sessionId"]
+    else:
+        practice = Practice(accounts_client)
+        headers, problem, row, check = practice.headers, practice.problem, practice.row, practice.answer
+        session_id = problem["sessionId"]
+    user_id = accounts_client.get("/api/profile", headers=headers).json()["userId"]
+    store = accounts_client.app.state.services.accounts.store
+    expected_answer = row["expected_answer"]
+    verifying, resume = threading.Event(), threading.Event()
+    completes = shared_pool.completes
+
+    async def pause(*args: Any, **kwargs: Any) -> bool:
+        verifying.set()
+        assert await asyncio.to_thread(resume.wait, 10), "check was never released"
+        return await completes(*args, **kwargs)
+
+    def reveal() -> None:
+        response = accounts_client.post(f"/api/practice/problems/{problem['id']}/reveal", headers=headers)
+        assert response.status_code == 200
+        assert response.json()["expectedAnswer"] == expected_answer
+
+    if reveal_first:
+        with monkeypatch.context() as patch, ThreadPoolExecutor(max_workers=1) as executor:
+            patch.setattr(shared_pool, "completes", pause)
+            pending = executor.submit(check, model, expected_answer)
+            try:
+                assert verifying.wait(10), "check never reached verification"
+                reveal()
+            finally:
+                resume.set()
+            reply = pending.result(timeout=10)
+    else:
+        reply = check(model, expected_answer)
+        reveal()
+
+    expected_outcome = "in_progress" if reveal_first else "correct"
+    assert reply["outcome"] == expected_outcome
+    assert check(model, expected_answer)["outcome"] == expected_outcome
+    assert store.problem(user_id, problem["id"])["status"] == ("revealed" if reveal_first else "correct")
+    events = store.session_events(user_id, session_id)
+    assert sum(event["event_type"] == "practice_completed" for event in events) == int(not reveal_first)
+    if guided and reveal_first:
+        assert lesson.level_of(lesson.level)["mastery"]["credits"] == 0
+    if not guided:
+        summary = practice.summary()
+        assert (summary["correct"], summary["revealed"]) == (int(not reveal_first), int(reveal_first))
+
+
+def test_failed_completion_event_leaves_the_check_retryable(
+    accounts_client: TestClient, model: Model, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    practice = Practice(accounts_client)
+    store = store_of(accounts_client)
+    add_event = store.add_event
+    expected = practice.row["expected_answer"]
+
+    def fail_completion(*args: Any, **kwargs: Any) -> bool:
+        if kwargs["event_type"] == "practice_completed":
+            raise RuntimeError("simulated completion write failure")
+        return add_event(*args, **kwargs)
+
+    model.reply = [compact(expected)]
+    practice.version = 1
+    with monkeypatch.context() as patch:
+        patch.setattr(store, "add_event", fail_completion)
+        failed = accounts_client.post(
+            f"/api/practice/problems/{practice.problem['id']}/check",
+            json={"sessionId": practice.problem["checkSessionId"], "snapshotVersion": practice.version,
+                  "image": png(), "inkLines": [{"id": "first", "inImage": True}]},
+            headers=practice.headers,
+        )
+    assert failed.status_code == 500
+    assert practice.row["status"] == "open"
+    assert practice.answer(model, expected)["outcome"] == "correct"
+    user = accounts_client.get("/api/profile", headers=practice.headers).json()["userId"]
+    events = store.session_events(user, practice.problem["sessionId"])
+    assert [event["event_type"] for event in events].count("practice_completed") == 1
 
 
 class TestTheLoop:

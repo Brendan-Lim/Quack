@@ -519,14 +519,14 @@ class UserStore:
             (user_id, session_id),
         )
 
-    def set_problem_status(self, user_id: str, problem_id: str, status: str) -> None:
-        """A problem answered right stays that way, and so does one whose answer was shown."""
+    def set_problem_status(self, user_id: str, problem_id: str, status: Literal["correct", "revealed"]) -> bool:
+        """True only for the first transition to a final outcome."""
 
-        self.database.execute(
+        return bool(self.database.execute(
             "UPDATE practice_problems SET status = ?, completed_at = ? "
             "WHERE id = ? AND user_id = ? AND status NOT IN ('correct', 'revealed')",
             (status, time.time(), problem_id, user_id),
-        )
+        ))
 
     def note_attempt(self, user_id: str, problem_id: str) -> None:
         self.database.execute(
