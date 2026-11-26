@@ -79,6 +79,7 @@ export type LineTrace = {
 };
 
 export type AnalyzeResponse = {
+  lessonEvidenceId?: string | null;
   // The server validates that alerts have new verified mistakes, unique ids, and no resolved overlap.
   snapshotVersion: number;
   requestId: string | null;
@@ -191,6 +192,7 @@ export type DeleteAccountResult = { signInDeleted: boolean };
 export type ClientEventType = "mistake_detected" | "correction_verified" | "mistake_dismissed" | "mistake_invalidated";
 
 export type LearningEventIn = {
+  lessonEvidenceId?: string | null;
   id: string;
   eventType: ClientEventType;
   mistakeId: string;

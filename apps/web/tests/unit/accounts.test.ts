@@ -84,7 +84,8 @@ describe("the event queue", () => {
     const storage = new MemoryStorage();
     const failing = vi.fn().mockRejectedValue(new Error("offline"));
     const queue = new LearningQueue("q", () => "s1", failing, storage);
-    queue.record(event);
+    const [original] = eventsFrom(reply({ lessonEvidenceId: "original-check", mistakes: [mistake("m1", true)] }));
+    queue.record(original);
     await queue.flush();
     queue.dispose();
     expect(queue.pending).toBe(1);
@@ -97,6 +98,7 @@ describe("the event queue", () => {
     expect(reloaded.pending).toBe(0);
     // Still the session it happened in, not the one current when it was finally sent.
     expect(sent[0][0].sessionId).toBe("s1");
+    expect(sent[0][0].lessonEvidenceId).toBe("original-check");
     expect(storage.getItem("q")).toBe("[]");
   });
 

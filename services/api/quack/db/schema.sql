@@ -108,6 +108,18 @@ CREATE TABLE IF NOT EXISTS problem_mistakes (
     PRIMARY KEY (user_id, problem_id, mistake_id)
 );
 
+-- A server-issued receipt ties queued lesson feedback to the check that produced it. Mistake hashes
+-- alone cannot distinguish an original attempt from the same maths written again after completion.
+CREATE TABLE IF NOT EXISTS lesson_check_evidence (
+    user_id TEXT NOT NULL,
+    evidence_id TEXT NOT NULL,
+    problem_id TEXT NOT NULL,
+    mistake_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    started_at DOUBLE PRECISION NOT NULL,
+    PRIMARY KEY (user_id, evidence_id, mistake_id, kind)
+);
+
 -- A level's standing that can't be recounted from questions: when it was first mastered, and whether
 -- the student chose to move on before mastering it. Mastery itself is counted from the questions.
 CREATE TABLE IF NOT EXISTS level_progress (

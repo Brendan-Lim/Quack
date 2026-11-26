@@ -58,7 +58,8 @@ class Attempt:
     tier: Tier
     # open, attempted, correct, revealed or skipped.
     status: str
-    # (misconception, confidence) for each verified mistake the student was shown on it.
+    # (misconception, confidence) for verified mistakes shown from the original attempt.
+    # The persistence layer excludes later edits; `status` is the saved completion, not current ink.
     mistakes: tuple[tuple[str, str], ...] = ()
     # A hint, an explanation or a nudge was asked for while answering it.
     assisted: bool = False

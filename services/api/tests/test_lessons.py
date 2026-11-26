@@ -10,6 +10,7 @@ import asyncio
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -53,6 +54,7 @@ class Lesson:
         if headers is None:
             unlock(client, self.headers, *PREREQUISITES.get(level, ()))
         self.version = 0
+        self.evidence: dict[tuple[str, str], str] = {}
         self.state = self.start()
 
     def start(self) -> dict[str, Any]:
@@ -87,13 +89,20 @@ class Lesson:
             headers=self.headers,
         )
         assert response.status_code == 200, response.text
-        return response.json()
+        result = response.json()
+        if receipt := result.get("lessonEvidenceId"):
+            for mistake in result["mistakes"]:
+                self.evidence[(mistake["id"], "mistake_detected")] = receipt
+            for mistake_id in result["resolvedMistakeIds"]:
+                self.evidence[(mistake_id, "resolved")] = receipt
+        return result
 
     def shown(self, mistake_id: str, event: str = "mistake_detected", **extra: Any) -> None:
         """What the client sends once it has shown the student something."""
 
         body = {"events": [{"id": str(uuid.uuid4()), "eventType": event, "mistakeId": mistake_id,
-                            "sessionId": self.state["sessionId"]} | extra]}
+                            "sessionId": self.state["sessionId"],
+                            "lessonEvidenceId": self.evidence.get((mistake_id, "mistake_detected" if event == "mistake_detected" else "resolved"))} | extra]}
         response = self.client.post("/api/learning/events", json=body, headers=self.headers)
         assert response.status_code == 200 and response.json()["refused"] == [], response.text
 
@@ -124,6 +133,58 @@ def unlock(client: TestClient, headers: dict[str, str], *levels: str) -> None:
     user = client.get("/api/profile", headers=headers).json()["userId"]
     for level in levels:
         store_of(client).mark_level(user, COURSE, level, "moved_on_at")
+
+
+@pytest.mark.parametrize("outcome", ["independent", "self_corrected", "assisted", "revealed"])
+def test_existing_completed_questions_survive_the_scoring_migration(tmp_path: Path, outcome: str) -> None:
+    from quack.db.database import Database
+    from quack.services.lessons import attempts_of
+    from quack.services.user_store import UserStore
+
+    path = tmp_path / "old-lessons.db"
+    database = Database(path=path)
+    store = UserStore(database)
+    store.add_problem("student", {
+        "id": "original", "session_id": "visit", "topic": "algebra", "difficulty": "learn",
+        "prompt_math": "3x + 2x", "prompt_display": "Simplify 3x + 2x", "expected_answer": "5x",
+        "verification_method": "expression", "course_id": COURSE, "level_id": "combine_like_terms",
+        "template_id": "like_terms.add_two", "skill_id": "algebra.like_terms", "created_at": 1,
+    })
+    database.execute(
+        "UPDATE practice_problems SET status = ?, completed_at = 20, assisted = ? WHERE id = 'original'",
+        ("revealed" if outcome == "revealed" else "correct", int(outcome == "assisted")),
+    )
+    store.link_problem_mistake("student", "original", "m_original", "variable_dropped", "confirmed", "")
+    # The independent case already contains the old bug: a shown mistake added after completion.
+    database.execute(
+        "UPDATE problem_mistakes SET created_at = ?, shown = 1, helped = ?",
+        (30 if outcome == "independent" else 10, int(outcome == "assisted")),
+    )
+    # Recreate the schema before this fix, keeping its saved completions and evidence.
+    for table, column in (
+        ("practice_problems", "assisted_at"), ("problem_mistakes", "attempt_started_at"),
+        ("problem_mistakes", "helped_at"), ("problem_mistakes", "attempt_shown"),
+        ("problem_mistakes", "attempt_misread"), ("problem_mistakes", "attempt_event_at"),
+    ):
+        database.execute(f"ALTER TABLE {table} DROP COLUMN {column}")
+    database.execute("DROP TABLE lesson_check_evidence")
+    database.close()
+
+    database = Database(path=path)
+    try:
+        store = UserStore(database)
+        def saved() -> Any:
+            return attempts_of(store, "student", store.course_problems("student", COURSE))[0]
+
+        assert saved().outcome == outcome
+        expected_credit = {"independent": 1, "self_corrected": 0.5, "assisted": 0.5, "revealed": 0}[outcome]
+        assert saved().credit == expected_credit
+        store.mark_assisted("student", "original")
+        store.flag_problem_mistake("student", "visit", "m_original", "helped", 1)
+        assert saved().credit == expected_credit
+        assert store.problem("student", "original")["completed_at"] == 20
+    finally:
+        database.close()
 
 
 @pytest.mark.parametrize("guided", [False, True], ids=["practice", "lesson"])
@@ -220,6 +281,173 @@ def test_failed_completion_event_leaves_the_check_retryable(
 
 class TestTheLoop:
     """Scenarios A to D: right alone, a mistake and its correction, and the question that follows."""
+
+    def test_new_mistake_after_completion_keeps_earned_credit(
+        self, accounts_client: TestClient, model: Model,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        lesson.answer_right(model)
+        assert lesson.level_of(lesson.level)["mastery"]["credits"] == 1
+        completed_at = lesson.row["completed_at"]
+
+        wrong = lesson.write(model, "5")
+        assert wrong["outcome"] == "correct"
+        assert wrong["snapshotOutcome"] == "incorrect"
+        assert wrong["misconception"]["id"] == "variable_dropped"
+        mistake = wrong["mistakes"][0]["id"]
+        lesson.shown(mistake)
+        # Retrying the check and delivering the event again must have the same effect.
+        lesson.write(model, "5")
+        lesson.shown(mistake)
+        assert lesson.row["completed_at"] == completed_at
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["independent"], mastery["corrected"]) == (1, 1, 0)
+        assert mastery["openMisconceptions"] == []
+
+    def test_mistake_before_completion_still_earns_self_corrected_credit(
+        self, accounts_client: TestClient, model: Model,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        mistake = lesson.write(model, "5")["mistakes"][0]["id"]
+        lesson.shown(mistake)
+        lesson.write(model, "5x", acknowledged=[mistake])
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["independent"], mastery["corrected"]) == (0.5, 0, 1)
+
+    def test_original_mistake_event_can_arrive_after_completion(
+        self, accounts_client: TestClient, model: Model,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        mistake = lesson.write(model, "5")["mistakes"][0]["id"]
+        lesson.write(model, "5x", acknowledged=[mistake])
+        assert lesson.level_of(lesson.level)["mastery"]["credits"] == 1
+        # The browser's durable queue uploads the original alert after the completion check.
+        lesson.shown(mistake)
+        lesson.shown(mistake)
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["corrected"]) == (0.5, 1)
+
+    def test_later_misread_feedback_cannot_erase_an_original_genuine_mistake(
+        self, accounts_client: TestClient, model: Model,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        mistake = lesson.write(model, "5")["mistakes"][0]["id"]
+        lesson.shown(mistake)
+        lesson.write(model, "5x", acknowledged=[mistake])
+        lesson.shown(mistake, "correction_verified")
+        lesson.write(model, "5")
+        lesson.shown(mistake)
+        lesson.write(model, "5x", acknowledged=[mistake])
+        lesson.shown(mistake, "mistake_invalidated", reason="misread")
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["corrected"]) == (0.5, 1)
+
+    def test_delayed_original_misread_evidence_keeps_its_order_across_new_ink(
+        self, accounts_client: TestClient, model: Model,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        original = lesson.write(model, "5")
+        mistake = original["mistakes"][0]["id"]
+        fixed = lesson.write(model, "5x", acknowledged=[mistake])
+        # Current ink redetects the same hash before the original queued events arrive.
+        lesson.write(model, "5")
+        lesson.shown(mistake)
+        lesson.shown(mistake, "mistake_invalidated", reason="misread", lessonEvidenceId=fixed["lessonEvidenceId"])
+        lesson.shown(mistake, lessonEvidenceId=original["lessonEvidenceId"])
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["independent"], mastery["corrected"]) == (1, 1, 0)
+
+    def test_concurrent_original_check_keeps_its_origin_when_classification_finishes_late(
+        self, accounts_client: TestClient, model: Model, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from quack.services import lessons
+
+        lesson = Lesson(accounts_client)
+        classifying, resume = threading.Event(), threading.Event()
+        note_mistakes = lessons.note_mistakes
+
+        async def pause(*args: Any, **kwargs: Any) -> Any:
+            if not classifying.is_set():
+                classifying.set()
+                assert await asyncio.to_thread(resume.wait, 10), "classification was never released"
+            return await note_mistakes(*args, **kwargs)
+
+        with monkeypatch.context() as patch, ThreadPoolExecutor(max_workers=1) as executor:
+            patch.setattr(lessons, "note_mistakes", pause)
+            original = executor.submit(lesson.write, model, "5")
+            try:
+                assert classifying.wait(10)
+                lesson.answer_right(model)
+                # A later check of the same mistake can even write the link first.
+                later = lesson.write(model, "5")
+                lesson.shown(later["mistakes"][0]["id"])
+                assert lesson.level_of(lesson.level)["mastery"]["credits"] == 1
+            finally:
+                resume.set()
+            wrong = original.result(timeout=10)
+
+        assert wrong["snapshotOutcome"] == "incorrect"
+        lesson.shown(wrong["mistakes"][0]["id"], lessonEvidenceId=wrong["lessonEvidenceId"])
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["corrected"]) == (0.5, 1)
+
+    @pytest.mark.parametrize("kind", ["hint", "explain", "nudge", "assisted"])
+    def test_help_after_completion_does_not_reduce_credit(
+        self, accounts_client: TestClient, model: Model, kind: str,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        # A verified but undisplayed mistake isn't scoring evidence by itself.
+        mistake = lesson.write(model, "5")["mistakes"][0]["id"]
+        lesson.write(model, "5x", acknowledged=[mistake])
+        # The same hash appears in new ink. Its alert must not be attributed to the unseen original.
+        repeated = lesson.write(model, "5")
+        assert repeated["mistakes"][0]["id"] == mistake
+        lesson.shown(mistake)
+        if kind in ("hint", "explain"):
+            response = accounts_client.post(
+                f"/api/{kind}", headers=lesson.headers,
+                json={"sessionId": lesson.question["checkSessionId"], "mistakeId": mistake,
+                      "level": 1, "studySessionId": lesson.state["sessionId"]},
+            )
+        else:
+            response = accounts_client.post(
+                f"/api/learn/problems/{lesson.question['id']}/{kind}", headers=lesson.headers,
+                json={"level": 1},
+            )
+        assert response.status_code == 200, response.text
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["independent"], mastery["assisted"]) == (1, 1, 0)
+
+    def test_help_requested_before_completion_counts_even_if_it_finishes_late(
+        self, accounts_client: TestClient, model: Model, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        lesson = Lesson(accounts_client)
+        mistake = lesson.write(model, "5")["mistakes"][0]["id"]
+        helping, resume = threading.Event(), threading.Event()
+        helper = accounts_client.app.state.services.help
+        get = helper.get
+
+        async def pause(*args: Any, **kwargs: Any) -> Any:
+            helping.set()
+            assert await asyncio.to_thread(resume.wait, 10), "help was never released"
+            return await get(*args, **kwargs)
+
+        with monkeypatch.context() as patch, ThreadPoolExecutor(max_workers=1) as executor:
+            patch.setattr(helper, "get", pause)
+            pending = executor.submit(
+                accounts_client.post, "/api/hint", headers=lesson.headers,
+                json={"sessionId": lesson.question["checkSessionId"], "mistakeId": mistake,
+                      "level": 1, "studySessionId": lesson.state["sessionId"]},
+            )
+            try:
+                assert helping.wait(10)
+                lesson.write(model, "5x", acknowledged=[mistake])
+                assert lesson.level_of(lesson.level)["mastery"]["credits"] == 1
+            finally:
+                resume.set()
+            assert pending.result(timeout=10).status_code == 200
+        mastery = lesson.level_of(lesson.level)["mastery"]
+        assert (mastery["credits"], mastery["assisted"]) == (0.5, 1)
 
     def test_the_first_question_is_the_one_in_the_lesson(self, accounts_client: TestClient) -> None:
         lesson = Lesson(accounts_client)

@@ -31,6 +31,7 @@ class ClientEvent:
     reason: str | None = None
     # The line written where an erased mistake was, which two readings have now agreed on.
     rewritten: bool = False
+    lesson_evidence_id: str | None = None
 
 
 def standing_of(events: list[dict[str, Any]], mistake_id: str) -> str | None:
@@ -69,12 +70,22 @@ class LearningLog:
         session = self._session_for(user_id, event.session_id)
         session_id = session["id"]
         with self.store.database.transaction():
+            evidence = None
+            if session["kind"] == "lesson" and event.lesson_evidence_id:
+                evidence = self.store.lesson_evidence(
+                    user_id, session_id, event.mistake_id, event.lesson_evidence_id,
+                    "detected" if event.event_type == "mistake_detected" else "resolved",
+                )
+                if evidence is None:
+                    return "unknown_lesson_evidence"
             history = self.store.mistake_events(user_id, event.mistake_id)
             within = [item for item in history if item["session_id"] == session_id]
             standing = standing_of(within, event.mistake_id)
             if event.event_type == "correction_verified":
                 # Erasing isn't fixing. It takes two readings of what's there now.
-                allowed = fact["resolved_how"] == "verified" or (fact["resolved_how"] == "erased" and event.rewritten)
+                allowed = evidence is not None or fact["resolved_how"] == "verified" or (
+                    fact["resolved_how"] == "erased" and event.rewritten
+                )
                 if not allowed:
                     return "not_verified"
                 if standing == "corrected":
@@ -83,37 +94,39 @@ class LearningLog:
                 event.event_type == "mistake_dismissed"
                 and any(item["event_type"] == "mistake_dismissed" for item in within)
             )
-            if already_said:
-                return None
             # A misreading takes a mistake off a lesson question's record, so it needs the server's own
             # word too: two readings that agreed the mistake had gone.
             misread_in_lesson = (
                 session["kind"] == "lesson" and event.event_type == "mistake_invalidated" and event.reason == "misread"
             )
-            if misread_in_lesson and fact["resolved_how"] != "verified":
+            if misread_in_lesson and evidence is None and fact["resolved_how"] != "verified":
                 return "not_verified"
-            self.store.add_event(
-                user_id,
-                session_id=session_id,
-                event_type=event.event_type,
-                source=SOURCE_BY_KIND[session["kind"]],
-                dedupe_key=f"client:{event.id}",
-                mistake_id=event.mistake_id,
-                topic=fact["topic"],
-                error_type=fact["error_type"],
-                detail=event.reason,
-            )
+            if not already_said:
+                self.store.add_event(
+                    user_id,
+                    session_id=session_id,
+                    event_type=event.event_type,
+                    source=SOURCE_BY_KIND[session["kind"]],
+                    dedupe_key=f"client:{event.id}",
+                    mistake_id=event.mistake_id,
+                    topic=fact["topic"],
+                    error_type=fact["error_type"],
+                    detail=event.reason,
+                )
             if session["kind"] == "lesson":
+                origin = evidence["started_at"] if evidence else None
+                problem_id = evidence["problem_id"] if evidence else None
                 if event.event_type == "mistake_detected":
-                    self.store.flag_problem_mistake(user_id, session_id, event.mistake_id, "shown", 1)
-                    self.store.flag_problem_mistake(user_id, session_id, event.mistake_id, "misread", 0)
+                    self.store.flag_problem_mistake(user_id, session_id, event.mistake_id, "shown", 1, origin, problem_id)
+                    self.store.flag_problem_mistake(user_id, session_id, event.mistake_id, "misread", 0, origin, problem_id)
                 elif event.event_type == "mistake_invalidated" and event.reason == "misread":
-                    self.store.flag_problem_mistake(user_id, session_id, event.mistake_id, "misread", 1)
+                    self.store.flag_problem_mistake(user_id, session_id, event.mistake_id, "misread", 1, origin, problem_id)
             self.store.touch_session(user_id, session_id)
         return None
 
     def help_given(
-        self, user_id: str, session_id: str | None, mistake_id: str, kind: str, level: int, text: str | None = None
+        self, user_id: str, session_id: str | None, mistake_id: str, kind: str, level: int, text: str | None = None,
+        requested_at: float | None = None,
     ) -> None:
         """A hint or explanation, recorded by the server as it hands it over."""
 
@@ -138,4 +151,4 @@ class LearningLog:
             help_text=text,
         )
         if session["kind"] == "lesson":
-            self.store.flag_problem_mistake(user_id, session["id"], mistake_id, "helped", 1)
+            self.store.flag_problem_mistake(user_id, session["id"], mistake_id, "helped", 1, requested_at)

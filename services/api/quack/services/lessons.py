@@ -85,18 +85,36 @@ def mastery_out(state: MasteryState) -> MasteryOut:
 
 
 def attempts_of(store: UserStore, user_id: str, problems: list[dict[str, Any]]) -> list[Attempt]:
-    """What each question showed, from its own record. The flags on `problem_mistakes` are set as the
-    events arrive, so deleting a mistake from My Mistakes, which deletes its events, changes nothing here."""
+    """Evidence from the original attempt, bounded by its first saved completion.
+
+    Client events can arrive late, so use the server's check/help origin, not event delivery time.
+    Legacy links use their creation time, and legacy help with unknown timing keeps its existing weight.
+    Flags survive deletion from My Mistakes. Current-ink feedback is independent of this scoring view.
+    """
 
     links = store.problem_mistake_links(user_id, [problem["id"] for problem in problems])
     attempts = []
     for problem in problems:
-        mine = [link for link in links if link["problem_id"] == problem["id"]]
+        completed_at = problem["completed_at"] if problem["status"] in ("correct", "revealed") else None
+
+        def during_attempt(origin: float | None, cutoff: float | None = completed_at) -> bool:
+            return cutoff is None or origin is None or origin <= cutoff
+
+        mine = [
+            link for link in links if link["problem_id"] == problem["id"]
+            and during_attempt(
+                link["attempt_started_at"] if link.get("attempt_started_at") is not None else link["created_at"]
+            )
+        ]
         # Shown to the student, and not since found by two readings to have been a misreading.
         mistakes = tuple(
-            (link["misconception"], link["confidence"]) for link in mine if link["shown"] and not link["misread"]
+            (link["misconception"], link["confidence"]) for link in mine
+            if (link.get("attempt_shown") if link.get("attempt_shown") is not None else link["shown"])
+            and not (link.get("attempt_misread") if link.get("attempt_misread") is not None else link["misread"])
         )
-        assisted = bool(problem["assisted"]) or any(link["helped"] for link in mine)
+        assisted = (bool(problem["assisted"]) and during_attempt(problem.get("assisted_at"))) or any(
+            link["helped"] and during_attempt(link.get("helped_at")) for link in mine
+        )
         attempts.append(
             Attempt(
                 problem_id=problem["id"],
@@ -441,14 +459,16 @@ def save_question(
     return True
 
 
-def nudge(store: UserStore, user_id: str, problem_id: str, level: int) -> tuple[str, bool]:
+def nudge(
+    store: UserStore, user_id: str, problem_id: str, level: int, requested_at: float | None = None,
+) -> tuple[str, bool]:
     problem = store.problem(user_id, problem_id)
     if problem is None or not problem["template_id"]:
         raise LessonRefused(404, "unknown problem")
     hints = TEMPLATES[problem["template_id"]].hints
     index = min(level, len(hints)) - 1
-    # A nudge is help, so the question counts as answered with help. Asking can only lower its credit.
-    store.mark_assisted(user_id, problem_id)
+    # A nudge during the original attempt is help. Later requests still get feedback.
+    store.mark_assisted(user_id, problem_id, requested_at)
     return hints[index], index == len(hints) - 1
 
 
@@ -522,7 +542,8 @@ def _recap_message(level: Level, view: LevelView, right_alone: int, corrected: i
 
 
 async def note_mistakes(
-    store: UserStore, user_id: str, problem: dict[str, Any], mistakes: list[Any], timeout_s: float
+    store: UserStore, user_id: str, problem: dict[str, Any], mistakes: list[Any], timeout_s: float,
+    attempt_started_at: float | None = None,
 ) -> MisconceptionOut | None:
     """Names the misconception behind each verified mistake on a lesson question, once, in the verifier's sandbox.
 
@@ -551,11 +572,11 @@ async def note_mistakes(
                 fallback,
             )
             assert isinstance(found, Classification)
-            await asyncio.to_thread(
-                store.link_problem_mistake, user_id, problem["id"], mistake.id, found.misconception, found.confidence,
-                found.evidence,
-            )
-            link = {"misconception": found.misconception, "confidence": found.confidence}
+            link = {"misconception": found.misconception, "confidence": found.confidence, "evidence": found.evidence}
+        await asyncio.to_thread(
+            store.link_problem_mistake, user_id, problem["id"], mistake.id, link["misconception"], link["confidence"],
+            link["evidence"], attempt_started_at,
+        )
         if shown is None and link["confidence"] == "confirmed":
             shown = misconception_out(link["misconception"])
     return shown

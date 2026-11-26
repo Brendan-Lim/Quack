@@ -23,6 +23,7 @@ TABLES = (
     "learning_events",
     "practice_problems",
     "problem_mistakes",
+    "lesson_check_evidence",
     "level_progress",
 )
 # Columns added since the first release. A database from before then gets them here, and keeps its rows.
@@ -44,6 +45,13 @@ _ADDED_COLUMNS = (
     ("practice_problems", "assisted", "INTEGER NOT NULL DEFAULT 0"),
     # What the question gives before it asks: `If x = 3, ...`. See lessons.question_context.
     ("practice_problems", "context_json", "TEXT"),
+    # Server-side origins of lesson scoring evidence, before any asynchronous work or delivery.
+    ("practice_problems", "assisted_at", "DOUBLE PRECISION"),
+    ("problem_mistakes", "attempt_started_at", "DOUBLE PRECISION"),
+    ("problem_mistakes", "helped_at", "DOUBLE PRECISION"),
+    ("problem_mistakes", "attempt_shown", "INTEGER"),
+    ("problem_mistakes", "attempt_misread", "INTEGER"),
+    ("problem_mistakes", "attempt_event_at", "DOUBLE PRECISION"),
 )
 _LOCAL_ACCOUNTS = """
 CREATE TABLE IF NOT EXISTS local_accounts (
